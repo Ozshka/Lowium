@@ -1,10 +1,9 @@
-// js/auth.js
 import { supabase } from './config.js';
-import { escapeHtml, sanitizeUrl, toast, autoGrow } from './utils.js';
-import { DEFAULT_AVATAR } from './config.js';
+import { escapeHtml, sanitizeUrl, toast } from './utils.js';
 
 export let currentUser = null;
 export let currentProfile = null;
+export let isAdmin = false;
 
 export async function refreshSession(onSuccess, onFail, onTagMissing) {
   try {
@@ -22,6 +21,9 @@ export async function refreshSession(onSuccess, onFail, onTagMissing) {
       profile = newProfile;
     }
     currentProfile = profile;
+
+    const { data: adminRow } = await supabase.from('admins').select('user_id').eq('user_id', currentUser.id).maybeSingle();
+    isAdmin = !!adminRow;
 
     if (!currentProfile.tag || currentProfile.tag === '@anon') {
       if (onTagMissing) onTagMissing();
@@ -56,6 +58,7 @@ export async function handleLogout() {
   await supabase.auth.signOut();
   currentUser = null;
   currentProfile = null;
+  isAdmin = false;
   window.location.reload();
 }
 
@@ -92,6 +95,7 @@ export async function updateProfile(data, avatarFile) {
     display_name: data.display_name || null,
     tag: data.tag,
     bio: data.bio || null,
+    region: data.region || null,
     avatar_url: avatarUrl,
     updated_at: new Date().toISOString()
   }).eq('id', currentUser.id);
@@ -104,6 +108,7 @@ export async function updateProfile(data, avatarFile) {
   currentProfile.display_name = data.display_name || null;
   currentProfile.tag = data.tag;
   currentProfile.bio = data.bio || null;
+  currentProfile.region = data.region || null;
   currentProfile.avatar_url = avatarUrl;
 
   return avatarUrl;
