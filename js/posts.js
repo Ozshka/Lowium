@@ -110,3 +110,48 @@ export async function submitComment(postId, content) {
   commentsCache.set(postId, entry);
   return entry.comments;
 }
+export async function loadComments(postId, containerEl) {
+  postId = String(postId);
+  
+  // Показываем лоадер
+  if (containerEl) {
+    containerEl.innerHTML = `<div class="comments-loading"><div class="spinner"></div> Loading...</div>`;
+  }
+
+  const { data: comments, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error loading comments:", error);
+    if (containerEl) {
+      containerEl.innerHTML = `<div class="comments-empty">Failed to load comments.</div>`;
+    }
+    return null;
+  }
+
+  // Подтягиваем профили авторов
+  const userIds = [...new Set(comments.map(c => c.user_id))];
+  const profileMap = {};
+  
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, display_name, tag, avatar_url, is_verified")
+      .in("id", userIds);
+    if (profiles) profiles.forEach(p => profileMap[p.id] = p);
+  }
+
+  const formattedComments = comments.map(c => ({
+    ...c,
+    author: profileMap[c.user_id] || { display_name: "Anonymous", tag: "@anon", avatar_url: null, is_verified: false }
+  }));
+
+  return formattedComments;
+}
+
+export function clearCommentsCache(postId) {
+  commentsCache.delete(String(postId));
+}
