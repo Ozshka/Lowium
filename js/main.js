@@ -929,7 +929,7 @@ else if (action === "toggle-comments") {
 
     toast("Comment deleted.", "success");
   }
-  eelse if (action === "submit-comment") {
+  else if (action === "submit-comment") {
   if (!auth.currentProfile?.is_verified) {
     $("verificationError").style.display = "none";
     $("verificationModal").classList.add("open");
