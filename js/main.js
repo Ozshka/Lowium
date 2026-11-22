@@ -460,6 +460,75 @@ $("publishBtn").addEventListener("click", () => {
   toast("Publishing is not implemented yet in this build.", "info");
 });
 
+// --- Image paste in post content ---
+const postContentEl = $("postContent");
+const previewGrid = $("previewGrid");
+let pastedImages = [];
+
+if (postContentEl && previewGrid) {
+  postContentEl.addEventListener("paste", (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    let hasImage = false;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        hasImage = true;
+        const file = item.getAsFile();
+        if (!file) continue;
+        
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          pastedImages.push(dataUrl);
+          renderPreviewGrid();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    
+    if (hasImage) {
+      e.preventDefault();
+    }
+  });
+}
+
+function renderPreviewGrid() {
+  if (!previewGrid) return;
+  previewGrid.innerHTML = pastedImages.map((url, i) => `
+    <div class="preview-item">
+      <img src="${url}" alt="Pasted image" />
+      <button class="remove-btn" type="button" data-remove-index="${i}">×</button>
+    </div>
+  `).join("");
+  
+  previewGrid.querySelectorAll("[data-remove-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.removeIndex, 10);
+      pastedImages.splice(idx, 1);
+      renderPreviewGrid();
+    });
+  });
+}
+
+// --- File input for post images ---
+const postImageInput = $("postImage");
+if (postImageInput) {
+  postImageInput.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        pastedImages.push(ev.target.result);
+        renderPreviewGrid();
+      };
+      reader.readAsDataURL(file);
+    });
+    postImageInput.value = "";
+  });
+}
+
 $("submitVerification").addEventListener("click", async () => {
   const message = $("verificationMessage").value.trim();
   const errorEl = $("verificationError");
