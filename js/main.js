@@ -900,35 +900,42 @@ else if (action === "toggle-comments") {
   }
 }
     else if (action === "delete-comment") {
-    const commentId = target.dataset.commentId;
-    const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
-    if (!ok) return;
+  const commentId = target.dataset.commentId;
+  const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
+  if (!ok) return;
 
-    try {
-      await posts.deleteComment(commentId, postId);
-    } catch (err) {
-      toast("Error deleting comment: " + err.message, "error");
-      return;
-    }
-
-    const commentEl = target.closest(".comment");
-    if (commentEl) commentEl.remove();
-
-    const body = target.closest(".comments-body");
-    const countEl = body?.closest(".comments-section")?.querySelector("[data-comment-count]");
-    if (countEl) {
-      const current = parseInt(countEl.textContent, 10) || 0;
-      countEl.textContent = Math.max(0, current - 1);
-    }
-
-    const list = body?.querySelector(".comment-list");
-    if (list && list.children.length === 0) {
-      body.innerHTML = `<div class="comments-empty">No comments yet.</div>`;
-      body.dataset.loaded = "";
-    }
-
-    toast("Comment deleted.", "success");
+  try {
+    await posts.deleteComment(commentId, postId);
+  } catch (err) {
+    toast("Error deleting comment: " + err.message, "error");
+    return;
   }
+
+  toast("Comment deleted.", "success");
+
+  const sec = target.closest(".comments-section");
+  const body = sec.querySelector("[data-comments-body]");
+
+  // сброс кэша и флага, затем перезагрузка списка с сервера
+  posts.clearCommentsCache(postId);
+  body.dataset.loaded = "";
+
+  try {
+    const fresh = await posts.loadComments(postId, body);
+    renderCommentsInto(body, fresh, postId);
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
+    body.dataset.loaded = "true";
+  }
+
+  // счётчик -1
+  const countEl = sec.querySelector("[data-comment-count]");
+  if (countEl) {
+    const current = parseInt(countEl.textContent, 10) || 0;
+    countEl.textContent = String(Math.max(0, current - 1));
+  }
+}
   else if (action === "submit-comment") {
   if (!auth.currentProfile?.is_verified) {
     $("verificationError").style.display = "none";
