@@ -93,7 +93,9 @@ async function renderPostsList() {
         </div>`;
       }
 
-      const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
+    const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
+      const canManage = isAuthor || auth.isAdmin; // <-- Админ может всё
+      
       const authorAvatar = sanitizeUrl(post.author.avatar_url) || DEFAULT_AVATAR;
       const authorName = post.author.display_name || post.author.tag || "Anonymous";
       const authorTag = post.author.tag || "";
@@ -135,7 +137,7 @@ async function renderPostsList() {
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeState.count}</span>
           </button>
-          ${isAuthor ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
+          ${canManage ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
             <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
             <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
           </div>` : ""}
