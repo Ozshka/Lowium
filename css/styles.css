@@ -705,22 +705,26 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   transform: none;
 }
 
+/* --- ЖЕСТКИЙ ФИКС ШЕСТЕРЁНКИ --- */
 #settingsBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;          /* убираем паддинг, чтобы SVG не сдвигался */
-  width: 40px;         /* фиксируем размер */
-  height: 40px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  width: 40px !important;
+  height: 40px !important;
+  margin: 0 !important;
+  overflow: hidden; /* чтобы ничего не вылезало */
 }
 
 #settingsBtn svg {
   width: 20px;
   height: 20px;
-  display: block;      /* убираем лишние отступы снизу от inline */
-  margin: 0;           /* сбрасываем возможные маргины */
+  display: block;
+  margin: auto; /* центрируем сам блок svg */
+  padding: 0;
+  transform: translateX(1px); /* микроподстройка вправо, если всё еще чуть-чуть влево */
 }
-
 /* Кнопка Sign Out — чтобы не плясала рядом с иконками */
 #logoutBtn {
   margin-left: 4px;
