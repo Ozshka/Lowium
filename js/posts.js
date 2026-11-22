@@ -21,7 +21,7 @@ export async function fetchPosts() {
 
   if (postsError) throw postsError;
 
-  const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified").in("id", userIds);
+ const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified");
   const profileMap = {};
   if (profiles) profiles.forEach(p => profileMap[p.id] = p);
 
