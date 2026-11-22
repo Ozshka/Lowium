@@ -212,27 +212,51 @@ function renderCommentsInto(body, comments, postId) {
 }
 
 async function renderPendingVerifications() {
-  console.log('[verif] START, isAdmin =', auth.isAdmin);   // ЛОГ 1
   if (!auth.isAdmin) return;
   
   const existing = document.getElementById("pendingVerificationsBlock");
   if (existing) existing.remove();
   
-  const { data, error } = await supabase
+  // 1. Получаем сами реквесты БЕЗ джоина
+  const { data: requests, error } = await supabase
     .from("verification_requests")
-    .select("id, message, created_at, user_id, profiles:user_id(tag, display_name)")
+    .select("id, message, created_at, user_id")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+  
+  if (error) {
+    console.error("Verification request error:", error);
+    return;
+  }
+  
+  if (!requests || requests.length === 0) return;
 
-  console.log('[verif] RESULT data =', data, 'error =', error);   // ЛОГ 2
+  // 2. Собираем все user_id из реквестов
+  const userIds = [...new Set(requests.map(r => r.user_id))];
+
+  // 3. Получаем профили этих юзеров
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, tag, display_name")
+    .in("id", userIds);
+
+  // 4. Делаем словарь профилей для быстрого поиска
+  const profileMap = {};
+  (profiles || []).forEach(p => { profileMap[p.id] = p; });
+
+  // 5. Привязываем профили к реквестам (эмулируем join)
+  const data = requests.map(r => ({
+    ...r,
+    profiles: profileMap[r.user_id] || null
+  }));
   
-  if (!data || data.length === 0) return;
-  
+  // Дальше идет твой обычный рендер
   const section = document.createElement("div");
   section.id = "pendingVerificationsBlock";
   section.className = "card";
   section.style.padding = "24px";
   section.style.marginBottom = "24px";
+  
   section.innerHTML = `<h3 style="font-family: 'Lora', serif; margin-bottom: 16px;">Pending Verifications (${data.length})</h3>
     ${data.map(r => `
       <div style="padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
@@ -247,6 +271,7 @@ async function renderPendingVerifications() {
       </div>
     `).join("")}
   `;
+  
   $("postsList").prepend(section);
   
   section.querySelectorAll("[data-approve]").forEach(btn => {
@@ -258,6 +283,7 @@ async function renderPendingVerifications() {
       renderPendingVerifications();
     });
   });
+  
   section.querySelectorAll("[data-reject]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const { error } = await supabase.from("verification_requests").update({ status: "rejected" }).eq("id", btn.dataset.reject);
