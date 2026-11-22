@@ -1,7 +1,6 @@
-// js/posts.js
 import { supabase, DEFAULT_AVATAR } from './config.js';
 import * as auth from './auth.js';
-import { escapeHtml, sanitizeUrl, formatShortDate, toast, confirmDialog } from './utils.js';
+import { toast, formatShortDate } from './utils.js';
 
 export const commentsCache = new Map();
 export const likesCache = new Map();
@@ -12,12 +11,20 @@ export function getLikeState(postId) {
 }
 
 export async function fetchPosts() {
-  const { data: posts, error: postsError } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(100);
+  const { data: posts, error: postsError } = await supabase
+    .from("posts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
   if (postsError) throw postsError;
 
-  const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio");
+  const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified");
   const profileMap = {};
   if (profiles) profiles.forEach(p => profileMap[p.id] = p);
+
+  const { data: adminRows } = await supabase.from("admins").select("user_id");
+  const adminIds = new Set((adminRows || []).map(a => a.user_id));
 
   const postIds = (posts || []).map(p => p.id);
   const commentCounts = {};
@@ -39,9 +46,13 @@ export async function fetchPosts() {
   return (posts || []).map(post => {
     const k = String(post.id);
     likesCache.set(k, { count: likeCounts[k] || 0, liked: userLikes.has(k) });
+    
+    const authorProfile = profileMap[post.user_id] || { display_name: "Anonymous", tag: "@anon", avatar_url: null, bio: null, region: null, is_verified: false };
+    
     return {
       ...post,
-      author: profileMap[post.user_id] || { display_name: "Anonymous", tag: "@anon", avatar_url: null, bio: null },
+      author: authorProfile,
+      is_owner: adminIds.has(post.user_id),
       comment_count: commentCounts[k] || 0
     };
   });
@@ -61,17 +72,22 @@ export async function toggleLike(postId, btnEl) {
   state.count = wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1;
   likesCache.set(postId, state);
   
-  // Обновляем кнопку сразу
   if (btnEl) {
     btnEl.classList.toggle("liked", state.liked);
     btnEl.setAttribute("data-tooltip", state.liked ? "Unlike" : "Like");
     btnEl.querySelector(".like-icon").textContent = state.liked ? "♥" : "♡";
+    
     const countEl = btnEl.querySelector(".like-count");
     if (countEl) {
       countEl.textContent = String(state.count);
       countEl.classList.remove("bump");
       void countEl.offsetWidth;
       countEl.classList.add("bump");
+    }
+    if (state.liked) {
+      btnEl.classList.remove("pop");
+      void btnEl.offsetWidth;
+      btnEl.classList.add("pop");
     }
   }
 
@@ -86,18 +102,49 @@ export async function toggleLike(postId, btnEl) {
   likesInFlight.delete(postId);
 
   if (error) {
-    // Откат при ошибке
     state.liked = wasLiked; state.count = prevCount; likesCache.set(postId, state);
-    toast("Error: " + error.message, "error");
-    // Перерисовка понадобится извне, но мы можем просто вернуть false
-    return false;
+    if (btnEl) {
+      btnEl.classList.toggle("liked", state.liked);
+      btnEl.querySelector(".like-icon").textContent = state.liked ? "♥" : "♡";
+      btnEl.querySelector(".like-count").textContent = String(state.count);
+    }
+    toast("Error updating like.", "error");
   }
-  return true;
+}
+
+export async function loadComments(postId, bodyEl) {
+  postId = String(postId);
+  bodyEl.innerHTML = `<div class="comments-loading"><div class="spinner"></div> Loading...</div>`;
+  
+  const { data: comments, error } = await supabase.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
+  if (error) { bodyEl.innerHTML = `<div class="comments-empty">Could not load comments.</div>`; return; }
+  
+  const userIds = [...new Set((comments || []).map(c => c.user_id))];
+  const pMap = {};
+  if (userIds.length) {
+    const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, is_verified").in("id", userIds);
+    (profiles || []).forEach(p => pMap[p.id] = p);
+  }
+
+  const { data: adminRows } = await supabase.from("admins").select("user_id");
+  const adminIds = new Set((adminRows || []).map(a => a.user_id));
+  
+  const enriched = (comments || []).map(c => ({ 
+    ...c, 
+    author: pMap[c.user_id] || { display_name: "Anon", tag: "@anon", avatar_url: null, is_verified: false },
+    is_owner: adminIds.has(c.user_id)
+  }));
+  commentsCache.set(postId, { comments: enriched, loaded: true });
+  return enriched;
 }
 
 export async function submitComment(postId, content) {
   postId = String(postId);
   if (!auth.currentUser) return null;
+  
+  if (!auth.currentProfile?.is_verified) {
+    throw new Error("VERIFICATION_REQUIRED");
+  }
   
   const { data, error } = await supabase.from("comments").insert({ post_id: postId, user_id: auth.currentUser.id, content }).select().single();
   if (error) throw error;
@@ -105,53 +152,14 @@ export async function submitComment(postId, content) {
   const entry = commentsCache.get(postId) || { comments: [], loaded: true };
   entry.comments.push({ 
     ...data, 
-    author: { display_name: auth.currentProfile?.display_name || auth.currentProfile?.tag, tag: auth.currentProfile?.tag, avatar_url: auth.currentProfile?.avatar_url } 
+    author: { 
+      display_name: auth.currentProfile?.display_name || auth.currentProfile?.tag, 
+      tag: auth.currentProfile?.tag, 
+      avatar_url: auth.currentProfile?.avatar_url,
+      is_verified: auth.currentProfile?.is_verified
+    },
+    is_owner: auth.isAdmin
   });
   commentsCache.set(postId, entry);
   return entry.comments;
-}
-export async function loadComments(postId, containerEl) {
-  postId = String(postId);
-  
-  // Показываем лоадер
-  if (containerEl) {
-    containerEl.innerHTML = `<div class="comments-loading"><div class="spinner"></div> Loading...</div>`;
-  }
-
-  const { data: comments, error } = await supabase
-    .from("comments")
-    .select("*")
-    .eq("post_id", postId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("Error loading comments:", error);
-    if (containerEl) {
-      containerEl.innerHTML = `<div class="comments-empty">Failed to load comments.</div>`;
-    }
-    return null;
-  }
-
-  // Подтягиваем профили авторов
-  const userIds = [...new Set(comments.map(c => c.user_id))];
-  const profileMap = {};
-  
-  if (userIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, display_name, tag, avatar_url, is_verified")
-      .in("id", userIds);
-    if (profiles) profiles.forEach(p => profileMap[p.id] = p);
-  }
-
-  const formattedComments = comments.map(c => ({
-    ...c,
-    author: profileMap[c.user_id] || { display_name: "Anonymous", tag: "@anon", avatar_url: null, is_verified: false }
-  }));
-
-  return formattedComments;
-}
-
-export function clearCommentsCache(postId) {
-  commentsCache.delete(String(postId));
 }
