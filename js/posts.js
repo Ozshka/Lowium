@@ -124,7 +124,7 @@ export async function loadComments(postId, bodyEl) {
   const userIds = [...new Set((comments || []).map(c => c.user_id))];
   const pMap = {};
   if (userIds.length) {
-    const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, is_verified").in("id", userIds);
+    const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified").in("id", userIds);
     (profiles || []).forEach(p => pMap[p.id] = p);
   }
 
