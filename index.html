@@ -85,8 +85,15 @@
           <input type="email" id="signupEmail" placeholder="name@example.com" required />
         </div>
         <div class="auth-input-group">
-          <label>Password (min 6 chars)</label>
+          <label>Password (min 8 chars, 1 upper, 1 lower, 1 number, 1 special)</label>
           <input type="password" id="signupPassword" placeholder="••••••••" required />
+          <div id="passwordRequirements" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+            <span class="req-badge" data-req="length"><span class="req-icon">○</span> 8+ chars</span>
+            <span class="req-badge" data-req="upper"><span class="req-icon">○</span> Uppercase</span>
+            <span class="req-badge" data-req="lower"><span class="req-icon">○</span> Lowercase</span>
+            <span class="req-badge" data-req="number"><span class="req-icon">○</span> Number</span>
+            <span class="req-badge" data-req="special"><span class="req-icon">○</span> Special</span>
+          </div>
         </div>
         <div class="auth-actions">
           <button type="submit" class="btn-primary btn-auth" id="submitSignup">Sign Up</button>
@@ -113,7 +120,8 @@
         <svg id="iconMoon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         <svg id="iconSun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
       </button>
-      
+
+      <button class="btn-glass" id="settingsBtn" type="button" style="display: none;">Settings</button>
       <button class="btn-danger" id="logoutBtn" type="button" style="display: none;">Sign Out</button>
     </div>
   </header>
@@ -206,13 +214,39 @@
     <img id="viewProfileAvatar" class="profile-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Avatar">
     <div id="viewProfileName" style="font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; color: var(--text-main); display: flex; justify-content: center; align-items: center; gap: 6px;">Username</div>
     <div id="viewProfileTag" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">@tag</div>
-    <div id="viewProfileStatus" style="font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 16px;">Member</div>
+    <div id="viewProfileRegion" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;"></div>
     <div id="viewProfileBio" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main); margin-bottom: 24px;">No bio yet.</div>
     <button class="btn-glass" style="width: 100%;" id="closeViewProfileBtn" type="button">Close</button>
   </div>
 </div>
 
-<!-- 5. Confirm -->
+<!-- 5. Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal card" data-lenis-prevent>
+    <h2>Settings</h2>
+    
+    <div class="auth-input-group" style="margin-bottom: 16px;">
+      <label>Email</label>
+      <div class="error-msg" id="emailError"></div>
+      <input type="email" id="newEmail" placeholder="new@example.com" />
+      <button class="btn-glass" id="updateEmailBtn" type="button" style="margin-top: 8px; width: 100%;">Update Email</button>
+    </div>
+
+    <div class="auth-input-group" style="margin-bottom: 16px;">
+      <label>Password</label>
+      <div class="error-msg" id="passError"></div>
+      <input type="password" id="newPass" placeholder="New password" />
+      <button class="btn-glass" id="updatePassBtn" type="button" style="margin-top: 8px; width: 100%;">Update Password</button>
+    </div>
+
+    <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
+      <button class="btn-danger" id="deleteAccountBtn" type="button" style="width: 100%; margin-bottom: 12px;">Delete Account</button>
+      <button class="btn-primary" id="closeSettingsBtn" type="button" style="width: 100%;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Confirm -->
 <div class="modal-overlay confirm-modal" id="confirmModal">
   <div class="modal card" data-lenis-prevent style="max-width: 360px; text-align: center;">
     <h2 id="confirmTitle">Confirm</h2>
@@ -227,14 +261,11 @@
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 
-    
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
 
-  
-  <script type="module" src="js/main.js"></script>
+<!-- Единственное подключение main.js -->
+<script type="module" src="js/main.js"></script>
 
-  
-  <script type="module" src="js/main.js"></script>
 </body>
 </html>
