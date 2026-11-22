@@ -1,23 +1,26 @@
-// js/main.js
 import { supabase, DEFAULT_AVATAR } from './config.js';
 import * as auth from './auth.js';
 import * as posts from './posts.js';
 import { initAutoGrow, autoGrow, autoGrowObserver, toast, escapeHtml, sanitizeUrl, formatDate, formatShortDate, confirmDialog } from './utils.js';
 
-const lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
-function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-requestAnimationFrame(raf);
-
 const $ = id => document.getElementById(id);
 
-// --- Тема ---
+let editingPostId = null;
+let pastedImages = [];
+
+if (window.Lenis) {
+  const lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
+  function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+  requestAnimationFrame(raf);
+}
+
 const savedTheme = localStorage.getItem('theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
 updateThemeIcon(savedTheme);
 
 function updateThemeIcon(theme) {
-  $("iconMoon").style.display = theme === 'dark' ? 'none' : 'block';
-  $("iconSun").style.display = theme === 'dark' ? 'block' : 'none';
+  if ($("iconMoon")) $("iconMoon").style.display = theme === 'dark' ? 'none' : 'block';
+  if ($("iconSun")) $("iconSun").style.display = theme === 'dark' ? 'block' : 'none';
 }
 
 $("themeToggle").addEventListener("click", async () => {
@@ -38,59 +41,86 @@ $("themeToggle").addEventListener("click", async () => {
   } catch (e) {}
 });
 
+function getOwnerBadgeHtml() {
+  return `<span class="owner-badge" title="Staff">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+      <path d="M16 2a4 4 0 0 0-4 4c0 .6.1 1.1.3 1.6L3 17.9V21h3.1l10.3-10.3c.5.2 1 .3 1.6.3a4 4 0 0 0 0-8z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+  </span>`;
+}
+
+function getVerifiedBadgeHtml(isVerified) {
+  if (!isVerified) return "";
+  return `<span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>`;
+}
+
+function openProfileModal(name, tag, avatar, bio, isOwner, region) {
+  $("viewProfileName").innerHTML = escapeHtml(name || "User") + (isOwner ? getOwnerBadgeHtml() : "");
+  $("viewProfileTag").textContent = tag || "";
+  $("viewProfileRegion").textContent = region && region !== "Unknown" ? `📍 ${region}` : "";
+  $("viewProfileAvatar").src = sanitizeUrl(avatar) || DEFAULT_AVATAR;
+  $("viewProfileBio").textContent = bio || "No bio yet.";
+  $("viewProfileModal").classList.add("open");
+}
+
 window.toggleAuthView = function(view) {
   $("loginFormView").style.display = view === 'signup' ? 'none' : 'block';
   $("signupFormView").style.display = view === 'signup' ? 'block' : 'none';
 };
 
-// --- Авторизация и старт ---
 async function startApp() {
-  await auth.refreshSession(
-    () => { // onSuccess
-      $("authScreen").classList.remove("active");
-      document.body.classList.remove("auth-mode");
-      $("mainSite").classList.remove("hidden");
-      $("mainFooter").classList.remove("hidden");
-      
-      $("userProfile").classList.add("active");
-      $("logoutBtn").style.display = "block";
-      $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User");
-      $("headerAvatar").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
+  try {
+    await auth.refreshSession(
+      () => {
+        $("authScreen").classList.remove("active");
+        document.body.classList.remove("auth-mode");
+        $("mainSite").classList.remove("hidden");
+        $("mainFooter").classList.remove("hidden");
+        
+        $("userProfile").classList.add("active");
+        $("logoutBtn").style.display = "block";
+        
+        const headerBadge = auth.isAdmin ? getOwnerBadgeHtml() : "";
+        $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User") + headerBadge + getVerifiedBadgeHtml(auth.currentProfile?.is_verified);
+        $("headerAvatar").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
 
-      $("editor").classList.add("open");
-      
-      renderPostsList();
-      setTimeout(() => { initAutoGrow(); autoGrow($("postContent")); }, 50);
-    },
-    () => { // onFail
-      $("authScreen").classList.add("active");
-      document.body.classList.add("auth-mode");
-      $("mainSite").classList.add("hidden");
-      $("mainFooter").classList.add("hidden");
-    },
-    () => { // onTagMissing
-      $("authScreen").classList.remove("active");
-      $("mainSite").classList.add("hidden");
-      $("mainFooter").classList.add("hidden");
-      $("onboardingTagModal").classList.add("open");
+        $("editor").classList.add("open");
+        renderPostsList();
+        setTimeout(() => { initAutoGrow(); autoGrow($("postContent")); }, 50);
+      },
+      () => {
+        $("authScreen").classList.add("active");
+        document.body.classList.add("auth-mode");
+        $("mainSite").classList.add("hidden");
+        $("mainFooter").classList.add("hidden");
+      },
+      () => {
+        $("authScreen").classList.remove("active");
+        $("mainSite").classList.add("hidden");
+        $("mainFooter").classList.add("hidden");
+        $("onboardingTagModal").classList.add("open");
+      }
+    );
+  } catch (err) {
+    console.error("StartApp error:", err);
+  } finally {
+    const preloader = $("preloader");
+    if (preloader) {
+      preloader.style.opacity = '0';
+      setTimeout(() => preloader.remove(), 300);
     }
-  );
-  
-  const preloader = $("preloader");
-  if (preloader) {
-    preloader.style.opacity = '0';
-    setTimeout(() => preloader.remove(), 300);
   }
 }
 
-// --- Отрисовка постов ---
 async function renderPostsList() {
   const postsList = $("postsList");
   try {
     const fetchedPosts = await posts.fetchPosts();
     
     if (fetchedPosts.length === 0) {
-      postsList.innerHTML = `<div class="card empty-state"><div class="icon">📝</div><p>It's quiet here... Write your first post!</p></div>`;
+      postsList.innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
+      renderPendingVerifications();
       return;
     }
 
@@ -115,18 +145,22 @@ async function renderPostsList() {
       const likeBtnClass = likeState.liked ? "like-btn liked" : "like-btn";
       const likeIcon = likeState.liked ? "♥" : "♡";
 
+      const ownerBadge = post.is_owner ? getOwnerBadgeHtml() : "";
+      const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
+
       return `
       <article class="post card" style="--index: ${index};" data-post-id="${escapeHtml(postId)}">
         <div class="post-author"
              data-action="view-profile"
-             data-user-id="${escapeHtml(post.user_id)}"
              data-name="${escapeHtml(authorName)}"
              data-tag="${escapeHtml(authorTag)}"
              data-avatar="${escapeHtml(authorAvatar)}"
-             data-bio="${escapeHtml(post.author.bio || "")}">
+             data-bio="${escapeHtml(post.author.bio || "")}"
+             data-owner="${post.is_owner}"
+             data-region="${escapeHtml(post.author.region || "")}">
           <img src="${escapeHtml(authorAvatar)}" class="post-author-avatar" alt="Author">
           <div class="post-author-info">
-            <div class="post-author-name">${escapeHtml(authorName)}</div>
+            <div class="post-author-name">${escapeHtml(authorName)}${ownerBadge}${verifiedBadge}</div>
             <div class="post-author-tag">${escapeHtml(authorTag)}</div>
           </div>
         </div>
@@ -145,29 +179,86 @@ async function renderPostsList() {
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeState.count}</span>
           </button>
-          ${isAuthor ? `<div class="post-footer-actions">
+          ${isAuthor ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
             <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
-            <button class="btn-danger" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
+            <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
           </div>` : ""}
         </div>
 
         <div class="comments-section" data-comments-for="${escapeHtml(postId)}">
           <button class="comments-toggle" data-action="toggle-comments" data-post-id="${escapeHtml(postId)}">
-            💬 Comments <span class="count" data-comment-count>${post.comment_count || 0}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            Comments <span class="count" data-comment-count>${post.comment_count || 0}</span>
           </button>
           <div class="comments-body" data-comments-body>
-            <div class="comments-loading">Loading...</div>
+            <div class="comments-loading"><div class="spinner"></div> Loading...</div>
           </div>
         </div>
       </article>`;
     }).join("");
+    
+    renderPendingVerifications();
   } catch (err) {
-    console.error(err);
-    postsList.innerHTML = `<div class="card empty-state"><div class="icon">⚠️</div><p>Could not load posts.</p></div>`;
+    console.error("Render posts error:", err);
+    postsList.innerHTML = `<div class="card empty-state"><p>Could not load posts.</p></div>`;
   }
 }
 
-// --- Обработчики событий ---
+async function renderPendingVerifications() {
+  if (!auth.isAdmin) return;
+  
+  const existing = document.getElementById("pendingVerificationsBlock");
+  if (existing) existing.remove();
+  
+  const { data } = await supabase
+    .from("verification_requests")
+    .select("id, message, created_at, user_id, profiles:user_id(tag, display_name)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  
+  if (!data || data.length === 0) return;
+  
+  const section = document.createElement("div");
+  section.id = "pendingVerificationsBlock";
+  section.className = "card";
+  section.style.padding = "24px";
+  section.style.marginBottom = "24px";
+  section.innerHTML = `<h3 style="font-family: 'Lora', serif; margin-bottom: 16px;">Pending Verifications (${data.length})</h3>
+    ${data.map(r => `
+      <div style="padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px;">
+          <strong>${escapeHtml(r.profiles?.tag || r.profiles?.display_name || "Unknown")}</strong>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">${escapeHtml(r.message)}</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-primary" data-approve="${r.id}" style="padding: 6px 12px; font-size: 0.8rem;">Approve</button>
+          <button class="btn-danger" data-reject="${r.id}" style="padding: 6px 12px; font-size: 0.8rem;">Reject</button>
+        </div>
+      </div>
+    `).join("")}
+  `;
+  $("postsList").prepend(section);
+  
+  section.querySelectorAll("[data-approve]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const { error } = await supabase.from("verification_requests").update({ status: "approved" }).eq("id", btn.dataset.approve);
+      if (error) { toast("Error: " + error.message, "error"); return; }
+      toast("User approved!", "success");
+      section.remove();
+      renderPendingVerifications();
+    });
+  });
+  section.querySelectorAll("[data-reject]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const { error } = await supabase.from("verification_requests").update({ status: "rejected" }).eq("id", btn.dataset.reject);
+      if (error) { toast("Error: " + error.message, "error"); return; }
+      toast("User rejected.", "info");
+      section.remove();
+      renderPendingVerifications();
+    });
+  });
+}
+
 $("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
@@ -193,7 +284,18 @@ $("signupForm").addEventListener("submit", async (e) => {
 $("logoutBtn").addEventListener("click", auth.handleLogout);
 if ($("onboardingLogoutBtn")) $("onboardingLogoutBtn").addEventListener("click", auth.handleLogout);
 
-// Обработчик кликов по постам
+$("userProfile").addEventListener("click", () => {
+  if (!auth.currentProfile) return;
+  openProfileModal(
+    auth.currentProfile.display_name || auth.currentProfile.tag,
+    auth.currentProfile.tag,
+    auth.currentProfile.avatar_url,
+    auth.currentProfile.bio,
+    auth.isAdmin,
+    auth.currentProfile.region
+  );
+});
+
 $("postsList").addEventListener("click", async (e) => {
   const target = e.target.closest("[data-action]");
   if (!target) return;
@@ -201,29 +303,193 @@ $("postsList").addEventListener("click", async (e) => {
   const action = target.dataset.action;
   const postId = target.dataset.postId;
 
-  if (action === "toggle-like") {
-     const success = await posts.toggleLike(postId, target);
-     if (!success) renderPostsList(); // откат при ошибке
+  if (action === "view-profile") {
+    e.preventDefault();
+    openProfileModal(
+      target.dataset.name,
+      target.dataset.tag,
+      target.dataset.avatar,
+      target.dataset.bio,
+      target.dataset.owner === "true",
+      target.dataset.region
+    );
+  }
+  else if (action === "toggle-like") {
+    await posts.toggleLike(postId, target);
   } 
+  else if (action === "edit-post") {
+    const article = target.closest(".post");
+    const title = article.querySelector("h2").textContent;
+    const content = article.querySelector(".post-content").textContent;
+    const existingImages = article.querySelectorAll(".post-gallery img");
+    
+    editingPostId = postId;
+    $("postTitle").value = title;
+    $("postContent").value = content;
+    autoGrow($("postContent"));
+    
+    pastedImages = Array.from(existingImages).map(img => img.src);
+    renderPreviewGrid();
+    
+    $("publishBtn").textContent = "Save Changes";
+    $("cancelEditBtn").classList.add("visible");
+    
+    $("editor").scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   else if (action === "delete-post") {
-     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
-       await supabase.from("posts").delete().eq("id", postId);
-       renderPostsList();
-     }
+    if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) {
+        toast("Error deleting post: " + error.message, "error");
+        return;
+      }
+      const postEl = target.closest(".post");
+      if (postEl) postEl.remove();
+      toast("Post deleted.", "success");
+      
+      if ($("postsList").children.length === 0) {
+        $("postsList").innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
+      }
+    }
   }
   else if (action === "toggle-comments") {
-     const sec = target.closest(".comments-section");
-     const body = sec.querySelector("[data-comments-body]");
-     body.classList.toggle("open");
-     if (body.classList.contains("open") && !body.dataset.loaded) {
-        // Логика загрузки комментов при необходимости...
+    const sec = target.closest(".comments-section");
+    const body = sec.querySelector("[data-comments-body]");
+    if (body.classList.contains("open")) {
+      body.classList.remove("open");
+    } else {
+      body.classList.add("open");
+      if (!body.dataset.loaded) {
+        const comments = await posts.loadComments(postId, body);
+        if (comments) {
+            const listHtml = comments.length === 0 ? `<div class="comments-empty">No comments yet.</div>`
+            : `<div class="comment-list">${comments.map(c => {
+                const isAuth = auth.currentUser && c.user_id === auth.currentUser.id;
+                const av = sanitizeUrl(c.author.avatar_url) || DEFAULT_AVATAR;
+                const nm = c.author.display_name || c.author.tag || "Anon";
+                const tg = c.author.tag || "";
+                const badge = c.is_owner ? getOwnerBadgeHtml() : "";
+                const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
+                return `
+                  <div class="comment">
+                    <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
+                    <div class="comment-body-text">
+                      <div class="comment-head">
+                        <span class="comment-author" data-action="view-profile" data-name="${escapeHtml(nm)}" data-tag="${escapeHtml(tg)}" data-avatar="${escapeHtml(av)}" data-bio="" data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
+                        <span class="comment-date">${formatShortDate(c.created_at)}</span>
+                        ${isAuth ? `<button class="comment-delete" type="button" data-action="delete-comment" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
+                      </div>
+                      <div class="comment-text">${escapeHtml(c.content)}</div>
+                    </div>
+                  </div>`;
+              }).join("")}</div>`;
+            
+            const formHtml = `
+              <div class="comment-form">
+                <textarea placeholder="Write a comment... (Ctrl+Enter)" maxlength="2000" data-role="comment-input" data-post-id="${escapeHtml(postId)}"></textarea>
+                <button class="btn-primary" type="button" data-action="submit-comment" data-post-id="${escapeHtml(postId)}">Send</button>
+              </div>`;
+            
+            body.innerHTML = listHtml + formHtml;
+            body.dataset.loaded = "true";
+        }
+      }
+    }
+  }
+  else if (action === "delete-comment") {
+    const commentId = target.dataset.commentId;
+    const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
+    if (!ok) return;
+
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    if (error) {
+      toast("Error deleting comment: " + error.message, "error");
+      return;
+    }
+    
+    const commentEl = target.closest(".comment");
+    if (commentEl) commentEl.remove();
+    
+    const body = target.closest(".comments-body");
+    const countEl = body?.closest(".comments-section")?.querySelector("[data-comment-count]");
+    if (countEl) {
+      const current = parseInt(countEl.textContent, 10) || 0;
+      countEl.textContent = Math.max(0, current - 1);
+    }
+    
+    const list = body?.querySelector(".comment-list");
+    if (list && list.children.length === 0) {
+      body.innerHTML = `<div class="comments-empty">No comments yet.</div>`;
+    }
+    
+    toast("Comment deleted.", "success");
+  }
+  else if (action === "submit-comment") {
+    if (!auth.currentProfile?.is_verified) {
+      $("verificationError").style.display = "none";
+      $("verificationModal").classList.add("open");
+      return;
+    }
+    const sec = target.closest(".comments-section");
+    const textarea = sec.querySelector('[data-role="comment-input"]');
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    try {
+      await posts.submitComment(postId, content);
+      textarea.value = "";
+      posts.clearCommentsCache(postId);
+      
+      const body = sec.querySelector("[data-comments-body]");
+      body.dataset.loaded = "";
+      
+      const freshComments = await posts.loadComments(postId, body);
+      if (freshComments) {
+        const listHtml = freshComments.length === 0 ? `<div class="comments-empty">No comments yet.</div>`
+        : `<div class="comment-list">${freshComments.map(c => {
+            const isAuth = auth.currentUser && c.user_id === auth.currentUser.id;
+            const av = sanitizeUrl(c.author.avatar_url) || DEFAULT_AVATAR;
+            const nm = c.author.display_name || c.author.tag || "Anon";
+            const tg = c.author.tag || "";
+            const badge = c.is_owner ? getOwnerBadgeHtml() : "";
+            const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
+            return `
+              <div class="comment">
+                <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
+                <div class="comment-body-text">
+                  <div class="comment-head">
+                    <span class="comment-author" data-action="view-profile" data-name="${escapeHtml(nm)}" data-tag="${escapeHtml(tg)}" data-avatar="${escapeHtml(av)}" data-bio="" data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
+                    <span class="comment-date">${formatShortDate(c.created_at)}</span>
+                    ${isAuth ? `<button class="comment-delete" type="button" data-action="delete-comment" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
+                  </div>
+                  <div class="comment-text">${escapeHtml(c.content)}</div>
+                </div>
+              </div>`;
+          }).join("")}</div>`;
+        
+        const formHtml = `
+          <div class="comment-form">
+            <textarea placeholder="Write a comment... (Ctrl+Enter)" maxlength="2000" data-role="comment-input" data-post-id="${escapeHtml(postId)}"></textarea>
+            <button class="btn-primary" type="button" data-action="submit-comment" data-post-id="${escapeHtml(postId)}">Send</button>
+          </div>`;
+        
+        body.innerHTML = listHtml + formHtml;
         body.dataset.loaded = "true";
-     }
+      }
+      
+      const countEl = sec.querySelector("[data-comment-count]");
+      if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+      
+    } catch (err) {
+      if (err.message === "VERIFICATION_REQUIRED") {
+        $("verificationError").style.display = "none";
+        $("verificationModal").classList.add("open");
+      } else {
+        toast("Error: " + err.message, "error");
+      }
+    }
   }
 });
 
-// Инициализация Observer для textarea
 autoGrowObserver.observe(document.body, { childList: true, subtree: true });
-
-// Запуск
 startApp();
