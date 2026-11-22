@@ -161,6 +161,56 @@ async function renderPostsList() {
   }
 }
 
+function renderCommentsInto(body, comments, postId) {
+  if (!comments) {
+    body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
+    return;
+  }
+
+  const listHtml = comments.length === 0
+    ? `<div class="comments-empty">No comments yet.</div>`
+    : `<div class="comment-list">${comments.map(c => {
+        const isAuth = auth.currentUser && c.user_id === auth.currentUser.id;
+        const av = sanitizeUrl(c.author.avatar_url) || DEFAULT_AVATAR;
+        const nm = c.author.display_name || c.author.tag || "Anon";
+        const tg = c.author.tag || "";
+        const badge = c.is_owner ? getOwnerBadgeHtml() : "";
+        const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
+        return `
+          <div class="comment">
+            <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
+            <div class="comment-body-text">
+              <div class="comment-head">
+                <span class="comment-author js-open-profile"
+                      data-name="${escapeHtml(nm)}"
+                      data-tag="${escapeHtml(tg)}"
+                      data-avatar="${escapeHtml(av)}"
+                      data-bio=""
+                      data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
+                <span class="comment-date">${formatShortDate(c.created_at)}</span>
+                ${isAuth ? `<button class="comment-delete" type="button"
+                    data-action="delete-comment"
+                    data-comment-id="${escapeHtml(c.id)}"
+                    data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
+              </div>
+              <div class="comment-text">${escapeHtml(c.content)}</div>
+            </div>
+          </div>`;
+      }).join("")}</div>`;
+
+  const formHtml = `
+    <div class="comment-form">
+      <textarea placeholder="Write a comment... (Ctrl+Enter)" maxlength="2000"
+                data-role="comment-input" data-post-id="${escapeHtml(postId)}"></textarea>
+      <button class="btn-primary" type="button" data-action="submit-comment"
+              data-post-id="${escapeHtml(postId)}">Send</button>
+    </div>`;
+
+  body.innerHTML = listHtml + formHtml;
+  body.dataset.loaded = "true";
+  bindProfileClicks();
+}
+
 async function renderPendingVerifications() {
   if (!auth.isAdmin) return;
   
@@ -830,51 +880,25 @@ $("postsList").addEventListener("click", async (e) => {
       }
     }
   }
-  else if (action === "toggle-comments") {
-    const sec = target.closest(".comments-section");
-    const body = sec.querySelector("[data-comments-body]");
-    if (body.classList.contains("open")) {
-      body.classList.remove("open");
-    } else {
-      body.classList.add("open");
-      if (!body.dataset.loaded) {
+else if (action === "toggle-comments") {
+  const sec = target.closest(".comments-section");
+  const body = sec.querySelector("[data-comments-body]");
+  if (body.classList.contains("open")) {
+    body.classList.remove("open");
+  } else {
+    body.classList.add("open");
+    if (!body.dataset.loaded) {
+      try {
         const comments = await posts.loadComments(postId, body);
-        if (comments) {
-            const listHtml = comments.length === 0 ? `<div class="comments-empty">No comments yet.</div>`
-            : `<div class="comment-list">${comments.map(c => {
-                const isAuth = auth.currentUser && c.user_id === auth.currentUser.id;
-                const av = sanitizeUrl(c.author.avatar_url) || DEFAULT_AVATAR;
-                const nm = c.author.display_name || c.author.tag || "Anon";
-                const tg = c.author.tag || "";
-                const badge = c.is_owner ? getOwnerBadgeHtml() : "";
-                const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
-                return `
-                  <div class="comment">
-                    <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
-                    <div class="comment-body-text">
-                      <div class="comment-head">
-                        <span class="comment-author js-open-profile" data-name="${escapeHtml(nm)}" data-tag="${escapeHtml(tg)}" data-avatar="${escapeHtml(av)}" data-bio="" data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
-                        <span class="comment-date">${formatShortDate(c.created_at)}</span>
-                        ${isAuth ? `<button class="comment-delete" type="button" data-action="delete-comment" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
-                      </div>
-                      <div class="comment-text">${escapeHtml(c.content)}</div>
-                    </div>
-                  </div>`;
-              }).join("")}</div>`;
-            
-            const formHtml = `
-              <div class="comment-form">
-                <textarea placeholder="Write a comment... (Ctrl+Enter)" maxlength="2000" data-role="comment-input" data-post-id="${escapeHtml(postId)}"></textarea>
-                <button class="btn-primary" type="button" data-action="submit-comment" data-post-id="${escapeHtml(postId)}">Send</button>
-              </div>`;
-            
-            body.innerHTML = listHtml + formHtml;
-            body.dataset.loaded = "true";
-            bindProfileClicks(); 
-        }
+        renderCommentsInto(body, comments, postId);
+      } catch (err) {
+        console.error(err);
+        body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
+        body.dataset.loaded = "true";
       }
     }
   }
+}
     else if (action === "delete-comment") {
     const commentId = target.dataset.commentId;
     const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
@@ -905,72 +929,43 @@ $("postsList").addEventListener("click", async (e) => {
 
     toast("Comment deleted.", "success");
   }
-  else if (action === "submit-comment") {
-    if (!auth.currentProfile?.is_verified) {
+  eelse if (action === "submit-comment") {
+  if (!auth.currentProfile?.is_verified) {
+    $("verificationError").style.display = "none";
+    $("verificationModal").classList.add("open");
+    return;
+  }
+  const sec = target.closest(".comments-section");
+  const textarea = sec.querySelector('[data-role="comment-input"]');
+  const content = textarea.value.trim();
+  if (!content) return;
+
+  try {
+    await posts.submitComment(postId, content);
+    textarea.value = "";
+    posts.clearCommentsCache(postId);
+
+    const body = sec.querySelector("[data-comments-body]");
+    body.dataset.loaded = "";
+
+    const freshComments = await posts.loadComments(postId, body);
+    renderCommentsInto(body, freshComments, postId);
+
+    const countEl = sec.querySelector("[data-comment-count]");
+    if (countEl) {
+      const current = parseInt(countEl.textContent, 10) || 0;
+      countEl.textContent = String(current + 1);
+    }
+
+  } catch (err) {
+    if (err.message === "VERIFICATION_REQUIRED") {
       $("verificationError").style.display = "none";
       $("verificationModal").classList.add("open");
-      return;
-    }
-    const sec = target.closest(".comments-section");
-    const textarea = sec.querySelector('[data-role="comment-input"]');
-    const content = textarea.value.trim();
-    if (!content) return;
-
-    try {
-      await posts.submitComment(postId, content);
-      textarea.value = "";
-      posts.clearCommentsCache(postId);
-
-      const body = sec.querySelector("[data-comments-body]");
-      body.dataset.loaded = "";
-
-      const freshComments = await posts.loadComments(postId, body);
-      if (freshComments) {
-        const listHtml = freshComments.length === 0 ? `<div class="comments-empty">No comments yet.</div>`
-        : `<div class="comment-list">${freshComments.map(c => {
-            const isAuth = auth.currentUser && c.user_id === auth.currentUser.id;
-            const av = sanitizeUrl(c.author.avatar_url) || DEFAULT_AVATAR;
-            const nm = c.author.display_name || c.author.tag || "Anon";
-            const tg = c.author.tag || "";
-            const badge = c.is_owner ? getOwnerBadgeHtml() : "";
-            const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
-            return `
-              <div class="comment">
-                <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
-                <div class="comment-body-text">
-                  <div class="comment-head">
-                    <span class="comment-author js-open-profile" data-name="${escapeHtml(nm)}" data-tag="${escapeHtml(tg)}" data-avatar="${escapeHtml(av)}" data-bio="" data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
-                    <span class="comment-date">${formatShortDate(c.created_at)}</span>
-                    ${isAuth ? `<button class="comment-delete" type="button" data-action="delete-comment" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
-                  </div>
-                  <div class="comment-text">${escapeHtml(c.content)}</div>
-                </div>
-              </div>`;
-          }).join("")}</div>`;
-
-        const formHtml = `
-          <div class="comment-form">
-            <textarea placeholder="Write a comment... (Ctrl+Enter)" maxlength="2000" data-role="comment-input" data-post-id="${escapeHtml(postId)}"></textarea>
-            <button class="btn-primary" type="button" data-action="submit-comment" data-post-id="${escapeHtml(postId)}">Send</button>
-          </div>`;
-
-        body.innerHTML = listHtml + formHtml;
-        body.dataset.loaded = "true";
-        bindProfileClicks();
-      }
-
-      const countEl = sec.querySelector("[data-comment-count]");
-      if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
-
-    } catch (err) {
-      if (err.message === "VERIFICATION_REQUIRED") {
-        $("verificationError").style.display = "none";
-        $("verificationModal").classList.add("open");
-      } else {
-        toast("Error: " + err.message, "error");
-      }
+    } else {
+      toast("Error: " + err.message, "error");
     }
   }
+}
 });
 
 $("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
