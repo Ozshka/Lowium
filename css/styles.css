@@ -67,15 +67,26 @@ body {
 }
 
 #mainFooter {
-  margin-top: auto; /* Прижмет футер к низу */
-  padding: 24px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--bg); /* Чтобы посты не просвечивали сквозь подвал */
+  border-top: 1px solid var(--border);
   text-align: center;
-  /* остальные стили... */
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  z-index: 100; /* Чтобы подвал был поверх постов */
+  /* Добавляем блюр для красоты (опционально) */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
+
 
 body.auth-mode { overflow: hidden; }
 
-.container { max-width: 800px; margin: 0 auto; padding: 24px 24px 48px; flex: 1; width: 100%; }
+.container { max-width: 800px; margin: 0 auto; padding: 24px 24px 48px; padding-bottom: 80px !important; flex: 1; width: 100%; }
 .container.hidden { display: none !important; }
 
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
