@@ -538,7 +538,8 @@ $("publishBtn").addEventListener("click", async () => {
     renderPreviewGrid();
     $("publishBtn").textContent = "Publish Post";
     $("cancelEditBtn").classList.remove("visible");
-    
+
+    posts.clearPostsCache();
     renderPostsList();
 
   } catch (err) {
