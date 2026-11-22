@@ -675,3 +675,38 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   .post-footer { flex-direction: row; align-items: center; justify-content: flex-start; }
   .post-footer-actions { margin-left: auto; }
 }
+
+/* Фикс выравнивания иконок в шапке */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-actions .theme-toggle {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-actions .theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Убираем скачки при ховере у шестерёнки (луна/солнце пусть остаются) */
+#settingsBtn:hover {
+  transform: none;
+}
+
+/* Кнопка Sign Out — чтобы не плясала рядом с иконками */
+#logoutBtn {
+  margin-left: 4px;
+  white-space: nowrap;
+}
