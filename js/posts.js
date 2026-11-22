@@ -10,6 +10,8 @@ export function getLikeState(postId) {
   return likesCache.get(String(postId)) || { count: 0, liked: false };
 }
 
+
+
 export async function fetchPosts() {
   const { data: posts, error: postsError } = await supabase
     .from("posts")
@@ -145,6 +147,7 @@ export async function submitComment(postId, content) {
   if (!auth.currentProfile?.is_verified) {
     throw new Error("VERIFICATION_REQUIRED");
   }
+
   
   const { data, error } = await supabase.from("comments").insert({ post_id: postId, user_id: auth.currentUser.id, content }).select().single();
   if (error) throw error;
@@ -160,8 +163,6 @@ export async function submitComment(postId, content) {
     },
     is_owner: auth.isAdmin
   });
-  commentsCache.set(postId, entry);
-
   export function clearPostsCache() {
   likesCache.clear();
 }
@@ -169,5 +170,6 @@ export async function submitComment(postId, content) {
 export function clearCommentsCache(postId) {
   commentsCache.delete(String(postId));
 }
-  return entry.comments;
-}
+  commentsCache.set(postId, entry);
+
+
