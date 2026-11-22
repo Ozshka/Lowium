@@ -864,6 +864,25 @@ $("postsList").addEventListener("click", async (e) => {
       }
     }
   }
+  else if (action === "delete-comment") {
+    const commentId = target.dataset.commentId;
+    const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
+    if (!ok) return;
+
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    if (error) {
+      toast("Error deleting comment: " + error.message, "error");
+      return;
+    }
+    toast("Comment deleted.", "success");
+    
+    const body = target.closest(".comments-body");
+    if (body) {
+      body.dataset.loaded = "";
+      body.querySelector("[data-action='toggle-comments']")?.click();
+      body.click();
+    }
+  }
   else if (action === "submit-comment") {
       if (!auth.currentProfile?.is_verified) {
         $("verificationError").style.display = "none";
