@@ -1018,6 +1018,35 @@ $("openEditProfileBtn").addEventListener("click", () => {
   profileAvatarFile = null;
 
   $("profileModal").classList.add("open");
+
+  // ===== Image Viewer (Zoom) =====
+$("postsList").addEventListener("click", (e) => {
+  // Если кликнули по картинке внутри галереи поста
+  if (e.target.matches(".post-gallery img")) {
+    const viewer = $("imageViewer");
+    const img = $("imageViewerImg");
+    img.src = e.target.src;
+    viewer.classList.add("open");
+  }
+});
+
+// Закрытие по кнопке
+$("closeImageViewer").addEventListener("click", () => {
+  $("imageViewer").classList.remove("open");
+});
+
+// Закрытие по клику на пустое место (фон)
+$("imageViewer").addEventListener("click", (e) => {
+  if (e.target === $("imageViewer") || e.target === $("imageViewerImg")) {
+    $("imageViewer").classList.remove("open");
+  }
+});
+
+// Закрытие по нажатию на Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("imageViewer").classList.contains("open")) {
+    $("imageViewer").classList.remove("open");
+  }
 });
 
 $("viewProfileModal").addEventListener("click", (e) => { if (e.target === $("viewProfileModal")) $("viewProfileModal").classList.remove("open"); });
