@@ -21,7 +21,7 @@ export async function fetchPosts() {
 
   if (postsError) throw postsError;
 
-  const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified");
+  const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified").in("id", userIds);
   const profileMap = {};
   if (profiles) profiles.forEach(p => profileMap[p.id] = p);
 
@@ -133,7 +133,7 @@ export async function loadComments(postId, bodyEl) {
   
   const enriched = (comments || []).map(c => ({ 
     ...c, 
-    author: pMap[c.user_id] || { display_name: "Anon", tag: "@anon", avatar_url: null, is_verified: false },
+    author: pMap[c.user_id] || { display_name: "Anon", tag: "@anon", avatar_url: null, bio: null, region: null, is_verified: false }
     is_owner: adminIds.has(c.user_id)
   }));
   commentsCache.set(postId, { comments: enriched, loaded: true });
