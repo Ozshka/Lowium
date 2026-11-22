@@ -3,55 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lowium (β 1.0.0)</title>
-  
-  <!-- Подключаем стили -->
-  <link rel="stylesheet" href="css/styles.css">
+<title>Lowium (β 1.8.2)</title>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<!-- Прелоадер -->
 <div id="preloader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:opacity 0.3s ease;">
   <div style="font-family:'Lora',serif;font-size:2rem;color:var(--text-main);font-weight:600;">Lowium</div>
   <div style="width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
 </div>
 
-<!-- ================= AUTH SCREEN ================= -->
 <div class="auth-wrapper" id="authScreen">
   <div class="auth-visuals">
-    <!-- Column 1 (Up) -->
     <div class="v-col up slow">
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
-      <!-- Duplicates for infinite loop -->
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
     </div>
-    <!-- Column 2 (Down) -->
     <div class="v-col down fast">
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
-      <!-- Duplicates -->
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
     </div>
-    <!-- Column 3 (Up) -->
     <div class="v-col up">
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
-      <!-- Duplicates -->
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
       <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
     </div>
   </div>
 
   <div class="auth-box">
-    <div class="auth-logo">Lowium <span>(β 1.0.0)</span></div>
+    <div class="auth-logo">Lowium <span>(β 1.8.2)</span></div>
     
-    <!-- Sign In -->
     <div id="loginFormView">
       <h1 class="auth-title">Sign In</h1>
       <p class="auth-subtitle">Please enter your details</p>
@@ -74,7 +78,6 @@
       </div>
     </div>
 
-    <!-- Sign Up -->
     <div id="signupFormView" style="display: none;">
       <h1 class="auth-title">Create Account</h1>
       <p class="auth-subtitle">Sign up to read and write posts</p>
@@ -85,15 +88,21 @@
           <input type="email" id="signupEmail" placeholder="name@example.com" required />
         </div>
         <div class="auth-input-group">
-          <label>Password (min 8 chars, 1 upper, 1 lower, 1 number, 1 special)</label>
+          <label>Password</label>
           <input type="password" id="signupPassword" placeholder="••••••••" required />
-          <div id="passwordRequirements" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
-            <span class="req-badge" data-req="length"><span class="req-icon">○</span> 8+ chars</span>
-            <span class="req-badge" data-req="upper"><span class="req-icon">○</span> Uppercase</span>
-            <span class="req-badge" data-req="lower"><span class="req-icon">○</span> Lowercase</span>
-            <span class="req-badge" data-req="number"><span class="req-icon">○</span> Number</span>
-            <span class="req-badge" data-req="special"><span class="req-icon">○</span> Special</span>
+          <div id="passwordRequirements" class="password-req-badges">
+            <span class="req-badge" data-req="length" title="At least 8 characters"><span class="req-icon">○</span> 8+</span>
+            <span class="req-badge" data-req="upper" title="One uppercase letter"><span class="req-icon">○</span> A-Z</span>
+            <span class="req-badge" data-req="lower" title="One lowercase letter"><span class="req-icon">○</span> a-z</span>
+            <span class="req-badge" data-req="number" title="One number"><span class="req-icon">○</span> 0-9</span>
+            <span class="req-badge" data-req="special" title="One special character"><span class="req-icon">○</span> !@#</span>
           </div>
+        </div>
+        <div class="auth-input-group" style="flex-direction: row; align-items: flex-start; gap: 10px; margin-top: 4px;">
+          <input type="checkbox" id="signupTerms" required style="width: auto; margin-top: 3px; cursor: pointer; accent-color: var(--accent);" />
+          <label for="signupTerms" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 400; line-height: 1.4; cursor: pointer; text-align: left;">
+            I agree to the <a href="privacy.html" target="_blank" style="color: var(--accent); text-decoration: none;">Privacy Policy</a> and consent to the processing of my personal data.
+          </label>
         </div>
         <div class="auth-actions">
           <button type="submit" class="btn-primary btn-auth" id="submitSignup">Sign Up</button>
@@ -106,23 +115,28 @@
   </div>
 </div>
 
-<!-- ================= MAIN SITE ================= -->
 <div class="container hidden" id="mainSite">
   <header class="card">
-    <h1>Lowium <span class="version-tag">(β 1.0.0)</span></h1>
+    <h1>Lowium <span class="version-tag">(β 1.8.2)</span></h1>
     <div class="header-actions">
-      <div class="user-profile" id="userProfile" title="Edit Profile">
+      <div class="user-profile" id="userProfile" title="Edit Profile" style="margin-right: 8px;">
         <img id="headerAvatar" class="user-avatar-small" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Avatar">
         <span id="headerUsername" class="user-name-small">User</span>
       </div>
 
+      <button class="theme-toggle" id="settingsBtn" title="Settings" type="button">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+  </svg>
+</button>
+      
       <button class="theme-toggle" id="themeToggle" title="Toggle theme" type="button">
         <svg id="iconMoon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         <svg id="iconSun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
       </button>
-
-      <button class="btn-glass" id="settingsBtn" type="button" style="display: none;">Settings</button>
-      <button class="btn-danger" id="logoutBtn" type="button" style="display: none;">Sign Out</button>
+      
+      <button class="btn-danger" id="logoutBtn" type="button" style="display: none; margin-left: 8px;">Sign Out</button>
     </div>
   </header>
 
@@ -146,17 +160,16 @@
   </div>
 
   <div class="posts" id="postsList">
-    <div class="card empty-state"><div class="icon">⏳</div><p>Loading...</p></div>
+    <div class="card empty-state"><p>Loading...</p></div>
   </div>
 </div>
 
-<footer id="mainFooter" class="hidden" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.85rem;">
-  &copy; 2026 Ozsh's Lowium
+<footer id="mainFooter" class="hidden">
+  <span>&copy; 2026 Ozsh's Lowium</span>
+  <span class="footer-sep">·</span>
+  <a href="privacy.html" target="_blank" class="footer-link">Privacy Policy</a>
 </footer>
 
-<!-- ================= MODALS ================= -->
-
-<!-- 1. Create Tag (non-closable) -->
 <div class="modal-overlay" id="onboardingTagModal" style="background: var(--bg);">
   <div class="modal card" data-lenis-prevent style="max-width: 440px; text-align: center;">
     <h2>One last step</h2>
@@ -164,15 +177,12 @@
     <div class="error-msg" id="onboardingError"></div>
     <input type="text" id="onboardingTag" placeholder="@username" maxlength="20" style="text-align: center; font-size: 1.2rem; font-family: 'Lora', serif;" />
     <button class="btn-primary" id="submitOnboardingTag" type="button" style="margin-top: 8px;">Continue</button>
-    
-    <!-- Logout button inside onboarding -->
     <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
       <button class="link-btn" id="onboardingLogoutBtn" type="button">Sign out and use another account</button>
     </div>
   </div>
 </div>
 
-<!-- 2. Setup Profile (closable) -->
 <div class="modal-overlay" id="onboardingProfileModal">
   <div class="modal card" data-lenis-prevent style="max-width: 440px; text-align: center;">
     <h2>Setup Profile</h2>
@@ -190,7 +200,6 @@
   </div>
 </div>
 
-<!-- 3. Edit Profile (normal) -->
 <div class="modal-overlay" id="profileModal">
   <div class="modal card" data-lenis-prevent>
     <h2>Edit Profile</h2>
@@ -203,50 +212,63 @@
     <input type="text" id="profileDisplayName" placeholder="Display Name (optional)" maxlength="30" />
     <input type="text" id="profileTag" placeholder="Unique Tag (e.g. @username)" maxlength="20" required />
     <textarea id="profileBio" placeholder="Your Bio (Max 160 chars)" maxlength="160" data-lenis-prevent rows="3"></textarea>
+    
+    <div class="auth-input-group" style="margin-bottom: 16px; text-align: left;">
+      <label>Region</label>
+      <select id="profileRegion" class="profile-select">
+        <option value="Unknown">Unknown</option>
+        <option value="Europe">Europe</option>
+        <option value="North America">North America</option>
+        <option value="South America">South America</option>
+        <option value="Asia">Asia</option>
+        <option value="Africa">Africa</option>
+        <option value="Oceania">Oceania</option>
+      </select>
+    </div>
+
     <button class="btn-primary" id="submitProfile" type="button">Save Profile</button>
   </div>
 </div>
 
-<!-- 4. View Profile -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal card" data-lenis-prevent>
+    <h2>Settings</h2>
+    
+    <div style="border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 24px;">
+      <h3 style="margin-bottom: 16px; font-size: 1.1rem;">Change Email</h3>
+      <div class="error-msg" id="emailError"></div>
+      <input type="email" id="newEmail" placeholder="New Email Address" style="margin-bottom: 12px;" />
+      <button class="btn-primary" id="updateEmailBtn" type="button" style="width: 100%;">Update Email</button>
+    </div>
+
+    <div style="border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 24px;">
+      <h3 style="margin-bottom: 16px; font-size: 1.1rem;">Change Password</h3>
+      <div class="error-msg" id="passError"></div>
+      <input type="password" id="newPass" placeholder="New Password" style="margin-bottom: 12px;" />
+      <button class="btn-primary" id="updatePassBtn" type="button" style="width: 100%;">Update Password</button>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom: 16px; font-size: 1.1rem; color: var(--danger);">Danger Zone</h3>
+      <button class="btn-danger" id="deleteAccountBtn" type="button" style="width: 100%; padding: 12px; border: 1px solid var(--danger);">Delete Account</button>
+    </div>
+    
+    <button class="btn-glass" id="closeSettingsBtn" type="button" style="width: 100%; margin-top: 24px;">Close</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="viewProfileModal">
   <div class="modal card" data-lenis-prevent style="text-align: center;">
     <h2 style="margin-bottom: 16px;">User Profile</h2>
     <img id="viewProfileAvatar" class="profile-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Avatar">
     <div id="viewProfileName" style="font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; color: var(--text-main); display: flex; justify-content: center; align-items: center; gap: 6px;">Username</div>
-    <div id="viewProfileTag" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">@tag</div>
-    <div id="viewProfileRegion" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;"></div>
+    <div id="viewProfileTag" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 4px;">@tag</div>
+    <div id="viewProfileRegion" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 16px;">📍 Region</div>
     <div id="viewProfileBio" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main); margin-bottom: 24px;">No bio yet.</div>
     <button class="btn-glass" style="width: 100%;" id="closeViewProfileBtn" type="button">Close</button>
   </div>
 </div>
 
-<!-- 5. Settings Modal -->
-<div class="modal-overlay" id="settingsModal">
-  <div class="modal card" data-lenis-prevent>
-    <h2>Settings</h2>
-    
-    <div class="auth-input-group" style="margin-bottom: 16px;">
-      <label>Email</label>
-      <div class="error-msg" id="emailError"></div>
-      <input type="email" id="newEmail" placeholder="new@example.com" />
-      <button class="btn-glass" id="updateEmailBtn" type="button" style="margin-top: 8px; width: 100%;">Update Email</button>
-    </div>
-
-    <div class="auth-input-group" style="margin-bottom: 16px;">
-      <label>Password</label>
-      <div class="error-msg" id="passError"></div>
-      <input type="password" id="newPass" placeholder="New password" />
-      <button class="btn-glass" id="updatePassBtn" type="button" style="margin-top: 8px; width: 100%;">Update Password</button>
-    </div>
-
-    <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
-      <button class="btn-danger" id="deleteAccountBtn" type="button" style="width: 100%; margin-bottom: 12px;">Delete Account</button>
-      <button class="btn-primary" id="closeSettingsBtn" type="button" style="width: 100%;">Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- 6. Confirm -->
 <div class="modal-overlay confirm-modal" id="confirmModal">
   <div class="modal card" data-lenis-prevent style="max-width: 360px; text-align: center;">
     <h2 id="confirmTitle">Confirm</h2>
@@ -258,14 +280,23 @@
   </div>
 </div>
 
-<!-- Toast Container -->
+<div class="modal-overlay" id="verificationModal">
+  <div class="modal card" data-lenis-prevent style="max-width: 440px; text-align: center;">
+    <h2>Verify Your Account</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem;">
+      To publish posts and comments, you need to be verified by an admin. Tell us a bit about yourself.
+    </p>
+    <div class="error-msg" id="verificationError"></div>
+    <textarea id="verificationMessage" placeholder="Why do you want to write on Lowium?" maxlength="500" rows="4" data-lenis-prevent></textarea>
+    <button class="btn-primary" id="submitVerification" type="button" style="margin-top: 8px;">Submit Request</button>
+    <button class="btn-glass" id="cancelVerification" type="button" style="margin-top: 8px;">Cancel</button>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
-
-<!-- Единственное подключение main.js -->
 <script type="module" src="js/main.js"></script>
-
 </body>
 </html>
