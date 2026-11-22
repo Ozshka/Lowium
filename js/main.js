@@ -450,14 +450,90 @@ $("deleteAccountBtn").addEventListener("click", async () => {
   }
 });
 
-$("publishBtn").addEventListener("click", () => {
+$("publishBtn").addEventListener("click", async () => {
   if (!auth.currentUser) return;
+  
+  // Проверка на верификацию
   if (!auth.currentProfile?.is_verified) {
     $("verificationError").style.display = "none";
     $("verificationModal").classList.add("open");
     return;
   }
-  toast("Publishing is not implemented yet in this build.", "info");
+
+  const title = $("postTitle").value.trim();
+  const content = $("postContent").value.trim();
+
+  if (!title) {
+    toast("Please enter a post title.", "error");
+    return;
+  }
+  if (!content && pastedImages.length === 0) {
+    toast("Please write something or add an image.", "error");
+    return;
+  }
+
+  $("publishBtn").disabled = true;
+  $("publishBtn").textContent = "Publishing...";
+
+  try {
+    const imageUrls = [];
+
+    // Загружаем картинки в Supabase Storage
+    if (pastedImages.length > 0) {
+      for (const dataUrl of pastedImages) {
+        // Конвертируем base64 (dataUrl) в Blob (файл)
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        
+        // Генерируем уникальное имя файла
+        const fileExt = blob.type.split('/')[1] || 'png';
+        const fileName = `${auth.currentUser.id}_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('posts')
+          .upload(fileName, blob, { contentType: blob.type });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('posts')
+          .getPublicUrl(fileName);
+        
+        imageUrls.push(publicUrl);
+      }
+    }
+
+    // Сохраняем пост в базу
+    const { error: postError } = await supabase
+      .from('posts')
+      .insert({
+        user_id: auth.currentUser.id,
+        title,
+        content,
+        image_urls: imageUrls
+      });
+
+    if (postError) throw postError;
+
+    // Очищаем поля после успеха
+    $("postTitle").value = "";
+    $("postContent").value = "";
+    autoGrow($("postContent"));
+    pastedImages = [];
+    renderPreviewGrid();
+    
+    toast("Post published successfully!", "success");
+    
+    // Перерисовываем ленту, чтобы новый пост появился сверху
+    renderPostsList();
+
+  } catch (err) {
+    console.error(err);
+    toast("Error publishing post: " + err.message, "error");
+  } finally {
+    $("publishBtn").disabled = false;
+    $("publishBtn").textContent = "Publish Post";
+  }
 });
 
 // --- Image paste in post content ---
