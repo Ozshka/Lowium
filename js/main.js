@@ -1004,7 +1004,10 @@ else if (action === "toggle-comments") {
 }
 });
 
-$("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
+ $("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
+
+$("openEditProfileBtn").addEventListener("click", () => {
+  $("viewProfileModal").classList.remove("open");
   
   // Заполняем форму текущими данными профиля
   $("profileAvatarPreview").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
