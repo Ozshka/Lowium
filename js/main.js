@@ -1005,6 +1005,18 @@ else if (action === "toggle-comments") {
 });
 
 $("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
+  
+  // Заполняем форму текущими данными профиля
+  $("profileAvatarPreview").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
+  $("profileDisplayName").value = auth.currentProfile?.display_name || "";
+  $("profileTag").value = auth.currentProfile?.tag || "";
+  $("profileBio").value = auth.currentProfile?.bio || "";
+  $("profileRegion").value = auth.currentProfile?.region || "Unknown";
+  profileAvatarFile = null;
+
+  $("profileModal").classList.add("open");
+});
+
 $("viewProfileModal").addEventListener("click", (e) => { if (e.target === $("viewProfileModal")) $("viewProfileModal").classList.remove("open"); });
 $("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").classList.remove("open"); });
 $("settingsModal").addEventListener("click", (e) => { if (e.target === $("settingsModal")) $("settingsModal").classList.remove("open"); });
