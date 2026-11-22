@@ -133,7 +133,7 @@ export async function loadComments(postId, bodyEl) {
   
   const enriched = (comments || []).map(c => ({ 
     ...c, 
-    author: pMap[c.user_id] || { display_name: "Anon", tag: "@anon", avatar_url: null, bio: null, region: null, is_verified: false }
+    author: pMap[c.user_id] || { display_name: "Anon", tag: "@anon", avatar_url: null, bio: null, region: null, is_verified: false },
     is_owner: adminIds.has(c.user_id)
   }));
   commentsCache.set(postId, { comments: enriched, loaded: true });
