@@ -813,10 +813,20 @@ $("postsList").addEventListener("click", async (e) => {
     
     $("editor").scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  else if (action === "delete-post") {
+ else if (action === "delete-post") {
     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
-      await supabase.from("posts").delete().eq("id", postId);
-      renderPostsList();
+      const { error } = await supabase.from("posts").delete().eq("id", postId);
+      if (error) {
+        toast("Error deleting post: " + error.message, "error");
+        return;
+      }
+      const postEl = target.closest(".post");
+      if (postEl) postEl.remove();
+      toast("Post deleted.", "success");
+      
+      if ($("postsList").children.length === 0) {
+        $("postsList").innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
+      }
     }
   }
   else if (action === "toggle-comments") {
