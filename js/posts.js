@@ -148,7 +148,6 @@ export async function submitComment(postId, content) {
     throw new Error("VERIFICATION_REQUIRED");
   }
 
-  
   const { data, error } = await supabase.from("comments").insert({ post_id: postId, user_id: auth.currentUser.id, content }).select().single();
   if (error) throw error;
   
@@ -164,5 +163,14 @@ export async function submitComment(postId, content) {
     is_owner: auth.isAdmin
   });
   commentsCache.set(postId, entry);
+  return entry.comments;
+}
 
+export function clearPostsCache() {
+  likesCache.clear();
+}
+
+export function clearCommentsCache(postId) {
+  commentsCache.delete(String(postId));
+}
 
