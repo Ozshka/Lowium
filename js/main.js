@@ -81,7 +81,90 @@ async function renderPostsList() {
       return;
     }
 
-    let realtimeChannel = null;
+      postsList.innerHTML = fetchedPosts.map((post, index) => {
+      const postId = String(post.id);
+      let imagesHtml = "";
+      const rawImages = post.image_urls?.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
+      const images = rawImages.map(sanitizeUrl).filter(Boolean);
+      
+      if (images.length > 0) {
+        imagesHtml = `<div class="post-gallery ${images.length === 1 ? 'single' : ''}">
+          ${images.map(url => `<img src="${escapeHtml(url)}" loading="lazy" alt="Post image" />`).join("")}
+        </div>`;
+      }
+
+    const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
+      const canManage = isAuthor || auth.isAdmin; // <-- Админ может всё
+      
+      const authorAvatar = sanitizeUrl(post.author.avatar_url) || DEFAULT_AVATAR;
+      const authorName = post.author.display_name || post.author.tag || "Anonymous";
+      const authorTag = post.author.tag || "";
+      
+      const likeState = posts.getLikeState(postId);
+      const likeBtnClass = likeState.liked ? "like-btn liked" : "like-btn";
+      const likeIcon = likeState.liked ? "♥" : "♡";
+
+      const ownerBadge = post.is_owner ? getOwnerBadgeHtml() : "";
+      const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
+
+      return `
+      <article class="post card" style="--index: ${index};" data-post-id="${escapeHtml(postId)}">
+        <div class="post-author js-open-profile"
+             data-name="${escapeHtml(authorName)}"
+             data-tag="${escapeHtml(authorTag)}"
+             data-avatar="${escapeHtml(authorAvatar)}"
+             data-bio="${escapeHtml(post.author.bio || "")}"
+             data-owner="${post.is_owner}"
+             data-region="${escapeHtml(post.author.region || "")}">
+          <img src="${escapeHtml(authorAvatar)}" class="post-author-avatar" alt="Author">
+          <div class="post-author-info">
+            <div class="post-author-name">${escapeHtml(authorName)}${ownerBadge}${verifiedBadge}</div>
+            <div class="post-author-tag">${escapeHtml(authorTag)}</div>
+          </div>
+        </div>
+
+        <div class="post-header">
+          <div>
+            <h2>${escapeHtml(post.title)}</h2>
+            <div class="post-date">${formatDate(post.created_at)}</div>
+          </div>
+        </div>
+        ${imagesHtml}
+        <div class="post-content">${escapeHtml(post.content)}</div>
+
+        <div class="post-footer">
+          <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
+            <span class="like-icon">${likeIcon}</span>
+            <span class="like-count">${likeState.count}</span>
+          </button>
+          ${canManage ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
+            <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
+            <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
+          </div>` : ""}
+        </div>
+
+        <div class="comments-section" data-comments-for="${escapeHtml(postId)}">
+          <button class="comments-toggle" data-action="toggle-comments" data-post-id="${escapeHtml(postId)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            Comments <span class="count" data-comment-count>${post.comment_count || 0}</span>
+          </button>
+          <div class="comments-body" data-comments-body>
+            <div class="comments-loading"><div class="spinner"></div> Loading...</div>
+          </div>
+        </div>
+      </article>`;
+    }).join("");
+    
+    bindProfileClicks();
+    renderPendingVerifications();
+  } catch (err) {
+    console.error("Render posts error:", err);
+    postsList.innerHTML = `<div class="card empty-state"><p>Could not load posts.</p></div>`;
+  }
+}
+
+
+ let realtimeChannel = null;
 
 function initRealtime() {
   // Если канал уже был создан, отписываемся от старого (чтобы не дублировать)
@@ -194,88 +277,6 @@ function isUserTyping() {
     return active.value.trim().length > 0; // Пишет только если поле не пустое
   }
   return false;
-}
-
-    postsList.innerHTML = fetchedPosts.map((post, index) => {
-      const postId = String(post.id);
-      let imagesHtml = "";
-      const rawImages = post.image_urls?.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
-      const images = rawImages.map(sanitizeUrl).filter(Boolean);
-      
-      if (images.length > 0) {
-        imagesHtml = `<div class="post-gallery ${images.length === 1 ? 'single' : ''}">
-          ${images.map(url => `<img src="${escapeHtml(url)}" loading="lazy" alt="Post image" />`).join("")}
-        </div>`;
-      }
-
-    const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
-      const canManage = isAuthor || auth.isAdmin; // <-- Админ может всё
-      
-      const authorAvatar = sanitizeUrl(post.author.avatar_url) || DEFAULT_AVATAR;
-      const authorName = post.author.display_name || post.author.tag || "Anonymous";
-      const authorTag = post.author.tag || "";
-      
-      const likeState = posts.getLikeState(postId);
-      const likeBtnClass = likeState.liked ? "like-btn liked" : "like-btn";
-      const likeIcon = likeState.liked ? "♥" : "♡";
-
-      const ownerBadge = post.is_owner ? getOwnerBadgeHtml() : "";
-      const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
-
-      return `
-      <article class="post card" style="--index: ${index};" data-post-id="${escapeHtml(postId)}">
-        <div class="post-author js-open-profile"
-             data-name="${escapeHtml(authorName)}"
-             data-tag="${escapeHtml(authorTag)}"
-             data-avatar="${escapeHtml(authorAvatar)}"
-             data-bio="${escapeHtml(post.author.bio || "")}"
-             data-owner="${post.is_owner}"
-             data-region="${escapeHtml(post.author.region || "")}">
-          <img src="${escapeHtml(authorAvatar)}" class="post-author-avatar" alt="Author">
-          <div class="post-author-info">
-            <div class="post-author-name">${escapeHtml(authorName)}${ownerBadge}${verifiedBadge}</div>
-            <div class="post-author-tag">${escapeHtml(authorTag)}</div>
-          </div>
-        </div>
-
-        <div class="post-header">
-          <div>
-            <h2>${escapeHtml(post.title)}</h2>
-            <div class="post-date">${formatDate(post.created_at)}</div>
-          </div>
-        </div>
-        ${imagesHtml}
-        <div class="post-content">${escapeHtml(post.content)}</div>
-
-        <div class="post-footer">
-          <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
-            <span class="like-icon">${likeIcon}</span>
-            <span class="like-count">${likeState.count}</span>
-          </button>
-          ${canManage ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
-            <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
-            <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
-          </div>` : ""}
-        </div>
-
-        <div class="comments-section" data-comments-for="${escapeHtml(postId)}">
-          <button class="comments-toggle" data-action="toggle-comments" data-post-id="${escapeHtml(postId)}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-            Comments <span class="count" data-comment-count>${post.comment_count || 0}</span>
-          </button>
-          <div class="comments-body" data-comments-body>
-            <div class="comments-loading"><div class="spinner"></div> Loading...</div>
-          </div>
-        </div>
-      </article>`;
-    }).join("");
-    
-    bindProfileClicks();
-    renderPendingVerifications();
-  } catch (err) {
-    console.error("Render posts error:", err);
-    postsList.innerHTML = `<div class="card empty-state"><p>Could not load posts.</p></div>`;
-  }
 }
 
 function renderCommentsInto(body, comments, postId) {
