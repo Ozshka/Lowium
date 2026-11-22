@@ -880,30 +880,32 @@ $("postsList").addEventListener("click", async (e) => {
     const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
     if (!ok) return;
 
-    const { error } = await supabase.from("comments").delete().eq("id", commentId);
-    if (error) {
-      toast("Error deleting comment: " + error.message, "error");
+    try {
+      await posts.deleteComment(commentId, postId);
+    } catch (err) {
+      toast("Error deleting comment: " + err.message, "error");
       return;
     }
-    
+
     const commentEl = target.closest(".comment");
     if (commentEl) commentEl.remove();
-    
+
     const body = target.closest(".comments-body");
     const countEl = body?.closest(".comments-section")?.querySelector("[data-comment-count]");
     if (countEl) {
       const current = parseInt(countEl.textContent, 10) || 0;
       countEl.textContent = Math.max(0, current - 1);
     }
-    
+
     const list = body?.querySelector(".comment-list");
     if (list && list.children.length === 0) {
       body.innerHTML = `<div class="comments-empty">No comments yet.</div>`;
+      body.dataset.loaded = "";
     }
-    
+
     toast("Comment deleted.", "success");
   }
-    else if (action === "submit-comment") {
+  else if (action === "submit-comment") {
     if (!auth.currentProfile?.is_verified) {
       $("verificationError").style.display = "none";
       $("verificationModal").classList.add("open");
@@ -918,10 +920,10 @@ $("postsList").addEventListener("click", async (e) => {
       await posts.submitComment(postId, content);
       textarea.value = "";
       posts.clearCommentsCache(postId);
-      
+
       const body = sec.querySelector("[data-comments-body]");
       body.dataset.loaded = "";
-      
+
       const freshComments = await posts.loadComments(postId, body);
       if (freshComments) {
         const listHtml = freshComments.length === 0 ? `<div class="comments-empty">No comments yet.</div>`
@@ -945,21 +947,21 @@ $("postsList").addEventListener("click", async (e) => {
                 </div>
               </div>`;
           }).join("")}</div>`;
-        
+
         const formHtml = `
           <div class="comment-form">
             <textarea placeholder="Write a comment... (Ctrl+Enter)" maxlength="2000" data-role="comment-input" data-post-id="${escapeHtml(postId)}"></textarea>
             <button class="btn-primary" type="button" data-action="submit-comment" data-post-id="${escapeHtml(postId)}">Send</button>
           </div>`;
-        
+
         body.innerHTML = listHtml + formHtml;
         body.dataset.loaded = "true";
         bindProfileClicks();
       }
-      
+
       const countEl = sec.querySelector("[data-comment-count]");
       if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
-      
+
     } catch (err) {
       if (err.message === "VERIFICATION_REQUIRED") {
         $("verificationError").style.display = "none";
