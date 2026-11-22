@@ -174,3 +174,13 @@ export function clearCommentsCache(postId) {
   commentsCache.delete(String(postId));
 }
 
+export async function deleteComment(commentId, postId) {
+  postId = String(postId);
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+  if (error) throw error;
+
+  // чистим кэш этого поста, чтобы при следующем открытии загрузилось с сервера
+  commentsCache.delete(postId);
+
+  return true;
+}
