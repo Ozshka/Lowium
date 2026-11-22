@@ -212,16 +212,19 @@ function renderCommentsInto(body, comments, postId) {
 }
 
 async function renderPendingVerifications() {
+  console.log('[verif] START, isAdmin =', auth.isAdmin);   // ЛОГ 1
   if (!auth.isAdmin) return;
   
   const existing = document.getElementById("pendingVerificationsBlock");
   if (existing) existing.remove();
   
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("verification_requests")
     .select("id, message, created_at, user_id, profiles:user_id(tag, display_name)")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+
+  console.log('[verif] RESULT data =', data, 'error =', error);   // ЛОГ 2
   
   if (!data || data.length === 0) return;
   
