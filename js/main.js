@@ -5,6 +5,9 @@ import { initAutoGrow, autoGrow, autoGrowObserver, escapeHtml, sanitizeUrl, form
 
 const $ = id => document.getElementById(id);
 
+let editingPostId = null;
+let pastedImages = [];
+
 if (window.Lenis) {
   const lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
   function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
@@ -132,7 +135,8 @@ async function renderPostsList() {
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeState.count}</span>
           </button>
-          ${isAuthor ? `<div class="post-footer-actions">
+          ${isAuthor ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
+            <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
             <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
           </div>` : ""}
         </div>
@@ -453,7 +457,6 @@ $("deleteAccountBtn").addEventListener("click", async () => {
 $("publishBtn").addEventListener("click", async () => {
   if (!auth.currentUser) return;
   
-  // Проверка на верификацию
   if (!auth.currentProfile?.is_verified) {
     $("verificationError").style.display = "none";
     $("verificationModal").classList.add("open");
@@ -473,19 +476,17 @@ $("publishBtn").addEventListener("click", async () => {
   }
 
   $("publishBtn").disabled = true;
-  $("publishBtn").textContent = "Publishing...";
+  $("publishBtn").textContent = editingPostId ? "Saving..." : "Publishing...";
 
   try {
     const imageUrls = [];
 
-    // Загружаем картинки в Supabase Storage
-    if (pastedImages.length > 0) {
-      for (const dataUrl of pastedImages) {
-        // Конвертируем base64 (dataUrl) в Blob (файл)
+    for (const dataUrl of pastedImages) {
+      if (dataUrl.startsWith("http")) {
+        imageUrls.push(dataUrl);
+      } else {
         const res = await fetch(dataUrl);
         const blob = await res.blob();
-        
-        // Генерируем уникальное имя файла
         const fileExt = blob.type.split('/')[1] || 'png';
         const fileName = `${auth.currentUser.id}_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
         
@@ -503,43 +504,67 @@ $("publishBtn").addEventListener("click", async () => {
       }
     }
 
-    // Сохраняем пост в базу
-    const { error: postError } = await supabase
-      .from('posts')
-      .insert({
-        user_id: auth.currentUser.id,
-        title,
-        content,
-        image_urls: imageUrls
-      });
+    if (editingPostId) {
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({
+          title,
+          content,
+          image_urls: imageUrls
+        })
+        .eq('id', editingPostId);
 
-    if (postError) throw postError;
+      if (updateError) throw updateError;
+      toast("Post updated successfully!", "success");
+    } else {
+      const { error: postError } = await supabase
+        .from('posts')
+        .insert({
+          user_id: auth.currentUser.id,
+          title,
+          content,
+          image_urls: imageUrls
+        });
 
-    // Очищаем поля после успеха
+      if (postError) throw postError;
+      toast("Post published successfully!", "success");
+    }
+
+    editingPostId = null;
     $("postTitle").value = "";
     $("postContent").value = "";
     autoGrow($("postContent"));
     pastedImages = [];
     renderPreviewGrid();
+    $("publishBtn").textContent = "Publish Post";
+    $("cancelEditBtn").classList.remove("visible");
     
-    toast("Post published successfully!", "success");
-    
-    // Перерисовываем ленту, чтобы новый пост появился сверху
     renderPostsList();
 
   } catch (err) {
     console.error(err);
-    toast("Error publishing post: " + err.message, "error");
+    toast("Error: " + err.message, "error");
   } finally {
     $("publishBtn").disabled = false;
-    $("publishBtn").textContent = "Publish Post";
+    if (!editingPostId) {
+      $("publishBtn").textContent = "Publish Post";
+    }
   }
 });
 
-// --- Image paste in post content ---
+$("cancelEditBtn").addEventListener("click", () => {
+  editingPostId = null;
+  $("postTitle").value = "";
+  $("postContent").value = "";
+  autoGrow($("postContent"));
+  pastedImages = [];
+  renderPreviewGrid();
+  $("publishBtn").textContent = "Publish Post";
+  $("cancelEditBtn").classList.remove("visible");
+});
+
 const postContentEl = $("postContent");
 const previewGrid = $("previewGrid");
-let pastedImages = [];
 
 if (postContentEl && previewGrid) {
   postContentEl.addEventListener("paste", (e) => {
@@ -587,7 +612,6 @@ function renderPreviewGrid() {
   });
 }
 
-// --- File input for post images ---
 const postImageInput = $("postImage");
 if (postImageInput) {
   postImageInput.addEventListener("change", (e) => {
@@ -770,6 +794,25 @@ $("postsList").addEventListener("click", async (e) => {
   if (action === "toggle-like") {
     await posts.toggleLike(postId, target);
   } 
+  else if (action === "edit-post") {
+    const article = target.closest(".post");
+    const title = article.querySelector("h2").textContent;
+    const content = article.querySelector(".post-content").textContent;
+    const existingImages = article.querySelectorAll(".post-gallery img");
+    
+    editingPostId = postId;
+    $("postTitle").value = title;
+    $("postContent").value = content;
+    autoGrow($("postContent"));
+    
+    pastedImages = Array.from(existingImages).map(img => img.src);
+    renderPreviewGrid();
+    
+    $("publishBtn").textContent = "Save Changes";
+    $("cancelEditBtn").classList.add("visible");
+    
+    $("editor").scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   else if (action === "delete-post") {
     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
       await supabase.from("posts").delete().eq("id", postId);
