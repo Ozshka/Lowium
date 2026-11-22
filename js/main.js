@@ -864,7 +864,7 @@ $("postsList").addEventListener("click", async (e) => {
       }
     }
   }
-  else if (action === "delete-comment") {
+    else if (action === "delete-comment") {
     const commentId = target.dataset.commentId;
     const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
     if (!ok) return;
@@ -874,14 +874,23 @@ $("postsList").addEventListener("click", async (e) => {
       toast("Error deleting comment: " + error.message, "error");
       return;
     }
-    toast("Comment deleted.", "success");
+    
+    const commentEl = target.closest(".comment");
+    if (commentEl) commentEl.remove();
     
     const body = target.closest(".comments-body");
-    if (body) {
-      body.dataset.loaded = "";
-      body.querySelector("[data-action='toggle-comments']")?.click();
-      body.click();
+    const countEl = body?.closest(".comments-section")?.querySelector("[data-comment-count]");
+    if (countEl) {
+      const current = parseInt(countEl.textContent, 10) || 0;
+      countEl.textContent = Math.max(0, current - 1);
     }
+    
+    const list = body?.querySelector(".comment-list");
+    if (list && list.children.length === 0) {
+      body.innerHTML = `<div class="comments-empty">No comments yet.</div>`;
+    }
+    
+    toast("Comment deleted.", "success");
   }
   else if (action === "submit-comment") {
       if (!auth.currentProfile?.is_verified) {
