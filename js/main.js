@@ -16,12 +16,12 @@ if (window.Lenis) {
 
 const savedTheme = localStorage.getItem('theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
-updateThemeIcon(savedTheme);
 
 function updateThemeIcon(theme) {
   if ($("iconMoon")) $("iconMoon").style.display = theme === 'dark' ? 'none' : 'block';
   if ($("iconSun")) $("iconSun").style.display = theme === 'dark' ? 'block' : 'none';
 }
+updateThemeIcon(savedTheme);
 
 $("themeToggle").addEventListener("click", async () => {
   const current = document.documentElement.getAttribute('data-theme');
@@ -64,54 +64,17 @@ function openProfileModal(name, tag, avatar, bio, isOwner, region) {
   $("viewProfileModal").classList.add("open");
 }
 
-window.toggleAuthView = function(view) {
-  $("loginFormView").style.display = view === 'signup' ? 'none' : 'block';
-  $("signupFormView").style.display = view === 'signup' ? 'block' : 'none';
-};
-
-async function startApp() {
-  try {
-    await auth.refreshSession(
-      () => {
-        $("authScreen").classList.remove("active");
-        document.body.classList.remove("auth-mode");
-        $("mainSite").classList.remove("hidden");
-        $("mainFooter").classList.remove("hidden");
-        
-        $("userProfile").classList.add("active");
-        $("logoutBtn").style.display = "block";
-        
-        const headerBadge = auth.isAdmin ? getOwnerBadgeHtml() : "";
-        $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User") + headerBadge + getVerifiedBadgeHtml(auth.currentProfile?.is_verified);
-        $("headerAvatar").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
-
-        $("editor").classList.add("open");
-        renderPostsList();
-        setTimeout(() => { initAutoGrow(); autoGrow($("postContent")); }, 50);
-      },
-      () => {
-        $("authScreen").classList.add("active");
-        document.body.classList.add("auth-mode");
-        $("mainSite").classList.add("hidden");
-        $("mainFooter").classList.add("hidden");
-      },
-      () => {
-        $("authScreen").classList.remove("active");
-        $("mainSite").classList.add("hidden");
-        $("mainFooter").classList.add("hidden");
-        $("onboardingTagModal").classList.add("open");
-      }
-    );
-  } catch (err) {
-    console.error("StartApp error:", err);
-  } finally {
-    const preloader = $("preloader");
-    if (preloader) {
-      preloader.style.opacity = '0';
-      setTimeout(() => preloader.remove(), 300);
-    }
-  }
-}
+$("userProfile").addEventListener("click", () => {
+  if (!auth.currentProfile) return;
+  openProfileModal(
+    auth.currentProfile.display_name || auth.currentProfile.tag,
+    auth.currentProfile.tag,
+    auth.currentProfile.avatar_url,
+    auth.currentProfile.bio,
+    auth.isAdmin,
+    auth.currentProfile.region
+  );
+});
 
 async function renderPostsList() {
   const postsList = $("postsList");
@@ -259,6 +222,113 @@ async function renderPendingVerifications() {
   });
 }
 
+async function startApp() {
+  try {
+    await auth.refreshSession(
+      () => {
+        $("authScreen").classList.remove("active");
+        document.body.classList.remove("auth-mode");
+        $("mainSite").classList.remove("hidden");
+        $("mainFooter").classList.remove("hidden");
+        
+        $("userProfile").classList.add("active");
+        $("settingsBtn").style.display = "block";
+        $("logoutBtn").style.display = "block";
+        
+        const headerBadge = auth.isAdmin ? getOwnerBadgeHtml() : "";
+        $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User") + headerBadge + getVerifiedBadgeHtml(auth.currentProfile?.is_verified);
+        $("headerAvatar").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
+
+        $("editor").classList.add("open");
+        renderPostsList();
+        setTimeout(() => { initAutoGrow(); autoGrow($("postContent")); }, 50);
+      },
+      () => {
+        $("authScreen").classList.add("active");
+        document.body.classList.add("auth-mode");
+        $("mainSite").classList.add("hidden");
+        $("mainFooter").classList.add("hidden");
+      },
+      () => {
+        $("authScreen").classList.remove("active");
+        $("mainSite").classList.add("hidden");
+        $("mainFooter").classList.add("hidden");
+        $("onboardingTagModal").classList.add("open");
+      }
+    );
+  } catch (err) {
+    console.error("StartApp error:", err);
+  } finally {
+    const preloader = $("preloader");
+    if (preloader) {
+      preloader.style.opacity = '0';
+      setTimeout(() => preloader.remove(), 300);
+    }
+  }
+}
+
+window.toggleAuthView = function(view) {
+  if (view === 'signup') {
+    $("loginFormView").style.display = "none";
+    $("signupFormView").style.display = "block";
+    $("loginError").style.display = "none";
+    $("signupError").style.display = "none";
+  } else {
+    $("signupFormView").style.display = "none";
+    $("loginFormView").style.display = "block";
+    $("loginError").style.display = "none";
+    $("signupError").style.display = "none";
+  }
+};
+
+const passwordReqs = {
+  length: (v) => v.length >= 8,
+  upper: (v) => /[A-Z]/.test(v),
+  lower: (v) => /[a-z]/.test(v),
+  number: (v) => /[0-9]/.test(v),
+  special: (v) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(v)
+};
+
+function validatePassword(password) {
+  const results = {};
+  for (const [key, test] of Object.entries(passwordReqs)) {
+    results[key] = test(password || "");
+  }
+  return results;
+}
+
+function updatePasswordUI(password) {
+  const badges = document.querySelectorAll("#passwordRequirements .req-badge");
+  if (!badges.length) return;
+  const results = validatePassword(password);
+  badges.forEach(badge => {
+    const req = badge.dataset.req;
+    const icon = badge.querySelector(".req-icon");
+    if (results[req]) {
+      badge.classList.add("valid");
+      if (icon) icon.textContent = "✓";
+    } else {
+      badge.classList.remove("valid");
+      if (icon) icon.textContent = "○";
+    }
+  });
+}
+
+function initPasswordCheck() {
+  const passInput = document.getElementById("signupPassword");
+  if (!passInput) return;
+  passInput.addEventListener("input", (e) => updatePasswordUI(e.target.value));
+  if (typeof window.toggleAuthView === "function") {
+    const originalToggle = window.toggleAuthView;
+    window.toggleAuthView = function(view) {
+      originalToggle(view);
+      if (view === 'signup') updatePasswordUI(passInput.value);
+    };
+  }
+}
+
+initPasswordCheck();
+
 $("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   try {
@@ -272,28 +342,437 @@ $("loginForm").addEventListener("submit", async (e) => {
 
 $("signupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  $("signupError").style.display = "none";
+  
+  const password = $("signupPassword").value;
+  const validation = validatePassword(password);
+  const allValid = Object.values(validation).every(Boolean);
+  
+  if (!allValid) {
+    $("signupError").textContent = "Please meet all password requirements.";
+    $("signupError").style.display = "block";
+    const firstFailed = document.querySelector("#passwordRequirements .req-badge:not(.valid)");
+    if (firstFailed) {
+      firstFailed.style.transform = "scale(1.15)";
+      setTimeout(() => firstFailed.style.transform = "scale(1)", 250);
+    }
+    return;
+  }
+
+  $("submitSignup").disabled = true;
+  $("submitSignup").textContent = "Creating...";
+
   try {
-    await auth.handleSignup($("signupEmail").value.trim(), $("signupPassword").value);
+    await auth.handleSignup($("signupEmail").value.trim(), password);
+    toast("Account created! Welcome to Lowium.", "success");
     startApp();
   } catch (err) {
     $("signupError").textContent = err.message;
     $("signupError").style.display = "block";
+  } finally {
+    $("submitSignup").disabled = false;
+    $("submitSignup").textContent = "Sign Up";
   }
 });
 
 $("logoutBtn").addEventListener("click", auth.handleLogout);
-if ($("onboardingLogoutBtn")) $("onboardingLogoutBtn").addEventListener("click", auth.handleLogout);
 
-$("userProfile").addEventListener("click", () => {
-  if (!auth.currentProfile) return;
-  openProfileModal(
-    auth.currentProfile.display_name || auth.currentProfile.tag,
-    auth.currentProfile.tag,
-    auth.currentProfile.avatar_url,
-    auth.currentProfile.bio,
-    auth.isAdmin,
-    auth.currentProfile.region
-  );
+$("settingsBtn").addEventListener("click", () => {
+  $("settingsModal").classList.add("open");
+  $("newEmail").value = "";
+  $("newPass").value = "";
+  $("emailError").style.display = "none";
+  $("passError").style.display = "none";
+});
+
+$("closeSettingsBtn").addEventListener("click", () => {
+  $("settingsModal").classList.remove("open");
+});
+
+$("updateEmailBtn").addEventListener("click", async () => {
+  const newEmail = $("newEmail").value.trim();
+  if (!newEmail) return;
+  $("emailError").style.display = "none";
+  $("updateEmailBtn").disabled = true;
+  $("updateEmailBtn").textContent = "Updating...";
+
+  const { error } = await supabase.auth.updateUser({ email: newEmail });
+  
+  $("updateEmailBtn").disabled = false;
+  $("updateEmailBtn").textContent = "Update Email";
+  
+  if (error) {
+    $("emailError").textContent = error.message;
+    $("emailError").style.display = "block";
+  } else {
+    toast("Email updated! Check your inbox to confirm.", "success");
+    $("newEmail").value = "";
+  }
+});
+
+$("updatePassBtn").addEventListener("click", async () => {
+  const newPass = $("newPass").value;
+  if (!newPass) return;
+  $("passError").style.display = "none";
+  $("updatePassBtn").disabled = true;
+  $("updatePassBtn").textContent = "Updating...";
+
+  const { error } = await supabase.auth.updateUser({ password: newPass });
+  
+  $("updatePassBtn").disabled = false;
+  $("updatePassBtn").textContent = "Update Password";
+  
+  if (error) {
+    $("passError").textContent = error.message;
+    $("passError").style.display = "block";
+  } else {
+    toast("Password updated successfully!", "success");
+    $("newPass").value = "";
+  }
+});
+
+$("deleteAccountBtn").addEventListener("click", async () => {
+  const ok = await confirmDialog("Are you absolutely sure you want to delete your account? This action cannot be undone.", { title: "Delete Account", okText: "Delete" });
+  if (!ok) return;
+
+  const { error } = await supabase.rpc('delete_user');
+  if (error) {
+    toast("Error deleting account: " + error.message, "error");
+  } else {
+    await supabase.auth.signOut();
+    window.location.reload();
+  }
+});
+
+$("publishBtn").addEventListener("click", async () => {
+  if (!auth.currentUser) return;
+  
+  if (!auth.currentProfile?.is_verified) {
+    $("verificationError").style.display = "none";
+    $("verificationModal").classList.add("open");
+    return;
+  }
+
+  const title = $("postTitle").value.trim();
+  const content = $("postContent").value.trim();
+
+  if (!title) {
+    toast("Please enter a post title.", "error");
+    return;
+  }
+  if (!content && pastedImages.length === 0) {
+    toast("Please write something or add an image.", "error");
+    return;
+  }
+
+  $("publishBtn").disabled = true;
+  $("publishBtn").textContent = editingPostId ? "Saving..." : "Publishing...";
+
+  try {
+    const imageUrls = [];
+
+    for (const dataUrl of pastedImages) {
+      if (dataUrl.startsWith("http")) {
+        imageUrls.push(dataUrl);
+      } else {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const fileExt = blob.type.split('/')[1] || 'png';
+        const fileName = `${auth.currentUser.id}_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('posts')
+          .upload(fileName, blob, { contentType: blob.type });
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('posts')
+          .getPublicUrl(fileName);
+        
+        imageUrls.push(publicUrl);
+      }
+    }
+
+    if (editingPostId) {
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({
+          title,
+          content,
+          image_urls: imageUrls
+        })
+        .eq('id', editingPostId);
+
+      if (updateError) throw updateError;
+      toast("Post updated successfully!", "success");
+    } else {
+      const { error: postError } = await supabase
+        .from('posts')
+        .insert({
+          user_id: auth.currentUser.id,
+          title,
+          content,
+          image_urls: imageUrls
+        });
+
+      if (postError) throw postError;
+      toast("Post published successfully!", "success");
+    }
+
+    editingPostId = null;
+    $("postTitle").value = "";
+    $("postContent").value = "";
+    autoGrow($("postContent"));
+    pastedImages = [];
+    renderPreviewGrid();
+    $("publishBtn").textContent = "Publish Post";
+    $("cancelEditBtn").classList.remove("visible");
+    
+    posts.clearPostsCache();
+    renderPostsList();
+
+  } catch (err) {
+    console.error(err);
+    toast("Error: " + err.message, "error");
+  } finally {
+    $("publishBtn").disabled = false;
+    if (!editingPostId) {
+      $("publishBtn").textContent = "Publish Post";
+    }
+  }
+});
+
+$("cancelEditBtn").addEventListener("click", () => {
+  editingPostId = null;
+  $("postTitle").value = "";
+  $("postContent").value = "";
+  autoGrow($("postContent"));
+  pastedImages = [];
+  renderPreviewGrid();
+  $("publishBtn").textContent = "Publish Post";
+  $("cancelEditBtn").classList.remove("visible");
+});
+
+const postContentEl = $("postContent");
+const previewGrid = $("previewGrid");
+
+if (postContentEl && previewGrid) {
+  postContentEl.addEventListener("paste", (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    let hasImage = false;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        hasImage = true;
+        const file = item.getAsFile();
+        if (!file) continue;
+        
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          pastedImages.push(dataUrl);
+          renderPreviewGrid();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    
+    if (hasImage) {
+      e.preventDefault();
+    }
+  });
+}
+
+function renderPreviewGrid() {
+  if (!previewGrid) return;
+  previewGrid.innerHTML = pastedImages.map((url, i) => `
+    <div class="preview-item">
+      <img src="${url}" alt="Pasted image" />
+      <button class="remove-btn" type="button" data-remove-index="${i}">×</button>
+    </div>
+  `).join("");
+  
+  previewGrid.querySelectorAll("[data-remove-index]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.removeIndex, 10);
+      pastedImages.splice(idx, 1);
+      renderPreviewGrid();
+    });
+  });
+}
+
+const postImageInput = $("postImage");
+if (postImageInput) {
+  postImageInput.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        pastedImages.push(ev.target.result);
+        renderPreviewGrid();
+      };
+      reader.readAsDataURL(file);
+    });
+    postImageInput.value = "";
+  });
+}
+
+$("submitVerification").addEventListener("click", async () => {
+  const message = $("verificationMessage").value.trim();
+  const errorEl = $("verificationError");
+  errorEl.style.display = "none";
+  
+  if (!message) {
+    errorEl.textContent = "Please write something.";
+    errorEl.style.display = "block";
+    return;
+  }
+  
+  $("submitVerification").disabled = true;
+  $("submitVerification").textContent = "Submitting...";
+  
+  const { error } = await supabase.from("verification_requests").insert({
+    user_id: auth.currentUser.id,
+    message
+  });
+  
+  $("submitVerification").disabled = false;
+  $("submitVerification").textContent = "Submit Request";
+  
+  if (error) {
+    if (error.code === "23505") {
+      errorEl.textContent = "You already have a pending request. Please wait.";
+    } else {
+      errorEl.textContent = error.message;
+    }
+    errorEl.style.display = "block";
+  } else {
+    toast("Request sent! Wait for admin approval.", "success");
+    $("verificationModal").classList.remove("open");
+    $("verificationMessage").value = "";
+  }
+});
+
+$("cancelVerification").addEventListener("click", () => {
+  $("verificationModal").classList.remove("open");
+});
+
+$("verificationModal").addEventListener("click", (e) => {
+  if (e.target === $("verificationModal")) $("verificationModal").classList.remove("open");
+});
+
+$("submitOnboardingTag").addEventListener("click", async () => {
+  const tag = $("onboardingTag").value.trim();
+  const errorEl = $("onboardingError");
+  errorEl.style.display = "none";
+
+  if (!tag) {
+    errorEl.textContent = "Please enter a username.";
+    errorEl.style.display = "block";
+    return;
+  }
+
+  $("submitOnboardingTag").disabled = true;
+  $("submitOnboardingTag").textContent = "Checking...";
+
+  try {
+    await auth.submitTag(tag);
+    $("onboardingTagModal").classList.remove("open");
+    $("onboardingProfileModal").classList.add("open");
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  } finally {
+    $("submitOnboardingTag").disabled = false;
+    $("submitOnboardingTag").textContent = "Continue";
+  }
+});
+
+$("onboardingLogoutBtn").addEventListener("click", auth.handleLogout);
+
+let onboardingAvatarFile = null;
+$("onboardingAvatarInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  onboardingAvatarFile = file;
+  $("onboardingAvatarPreview").src = URL.createObjectURL(file);
+});
+
+$("skipOnboardingProfile").addEventListener("click", () => {
+  $("onboardingProfileModal").classList.remove("open");
+  startApp();
+});
+
+$("submitOnboardingProfile").addEventListener("click", async () => {
+  const bio = $("onboardingBio").value.trim();
+  $("submitOnboardingProfile").disabled = true;
+  $("submitOnboardingProfile").textContent = "Saving...";
+
+  try {
+    await auth.updateProfile(
+      {
+        display_name: auth.currentProfile?.display_name || auth.currentProfile?.tag,
+        tag: auth.currentProfile?.tag,
+        bio: bio || null,
+        region: auth.currentProfile?.region || "Unknown"
+      },
+      onboardingAvatarFile
+    );
+    toast("Profile set up successfully!", "success");
+    $("onboardingProfileModal").classList.remove("open");
+    startApp();
+  } catch (err) {
+    toast("Error saving profile: " + err.message, "error");
+  } finally {
+    $("submitOnboardingProfile").disabled = false;
+    $("submitOnboardingProfile").textContent = "Save";
+  }
+});
+
+let profileAvatarFile = null;
+$("avatarInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  profileAvatarFile = file;
+  $("profileAvatarPreview").src = URL.createObjectURL(file);
+});
+
+$("submitProfile").addEventListener("click", async () => {
+  const tag = $("profileTag").value.trim();
+  const displayName = $("profileDisplayName").value.trim();
+  const bio = $("profileBio").value.trim();
+  const region = $("profileRegion").value;
+  const errorEl = $("profileError");
+  errorEl.style.display = "none";
+
+  if (!tag) {
+    errorEl.textContent = "Tag is required.";
+    errorEl.style.display = "block";
+    return;
+  }
+
+  $("submitProfile").disabled = true;
+  $("submitProfile").textContent = "Saving...";
+
+  try {
+    await auth.updateProfile(
+      { display_name: displayName || null, tag, bio: bio || null, region },
+      profileAvatarFile
+    );
+    toast("Profile updated!", "success");
+    $("profileModal").classList.remove("open");
+    $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User") + (auth.isAdmin ? getOwnerBadgeHtml() : "") + getVerifiedBadgeHtml(auth.currentProfile?.is_verified);
+    $("headerAvatar").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.style.display = "block";
+  } finally {
+    $("submitProfile").disabled = false;
+    $("submitProfile").textContent = "Save Profile";
+  }
 });
 
 $("postsList").addEventListener("click", async (e) => {
@@ -488,6 +967,20 @@ $("postsList").addEventListener("click", async (e) => {
         toast("Error: " + err.message, "error");
       }
     }
+  }
+});
+
+$("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
+$("viewProfileModal").addEventListener("click", (e) => { if (e.target === $("viewProfileModal")) $("viewProfileModal").classList.remove("open"); });
+$("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").classList.remove("open"); });
+$("settingsModal").addEventListener("click", (e) => { if (e.target === $("settingsModal")) $("settingsModal").classList.remove("open"); });
+
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error);
+  const preloader = document.getElementById("preloader");
+  if (preloader) {
+    preloader.style.opacity = '0';
+    setTimeout(() => preloader.remove(), 300);
   }
 });
 
