@@ -454,6 +454,7 @@ async function startApp() {
 
         $("editor").classList.add("open");
         renderPostsList();
+        initRealtime();     
         setTimeout(() => { initAutoGrow(); autoGrow($("postContent")); }, 50);
       },
       () => {
