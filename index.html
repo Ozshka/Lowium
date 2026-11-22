@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lowium (β 1.0.0)</title>
+  
+  <!-- Подключаем стили -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- Прелоадер -->
+<div id="preloader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:opacity 0.3s ease;">
+  <div style="font-family:'Lora',serif;font-size:2rem;color:var(--text-main);font-weight:600;">Lowium</div>
+  <div style="width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;"></div>
+</div>
+
+<!-- ================= AUTH SCREEN ================= -->
+<div class="auth-wrapper" id="authScreen">
+  <div class="auth-visuals">
+    <!-- Column 1 (Up) -->
+    <div class="v-col up slow">
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <!-- Duplicates for infinite loop -->
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+    </div>
+    <!-- Column 2 (Down) -->
+    <div class="v-col down fast">
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <!-- Duplicates -->
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+    </div>
+    <!-- Column 3 (Up) -->
+    <div class="v-col up">
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <!-- Duplicates -->
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div><div class="v-line short"></div></div><div class="v-img"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+      <div class="v-card"><div class="v-head"><div class="v-avatar"></div><div class="v-meta"><div class="v-name"></div><div class="v-tag"></div></div></div><div class="v-text"><div class="v-line"></div></div><div class="v-img rect"></div><div class="v-footer"><div class="v-stat"></div><div class="v-stat"></div></div></div>
+    </div>
+  </div>
+
+  <div class="auth-box">
+    <div class="auth-logo">Lowium <span>(β 1.0.0)</span></div>
+    
+    <!-- Sign In -->
+    <div id="loginFormView">
+      <h1 class="auth-title">Sign In</h1>
+      <p class="auth-subtitle">Please enter your details</p>
+      <div class="error-msg" id="loginError"></div>
+      <form class="auth-form" id="loginForm">
+        <div class="auth-input-group">
+          <label>E-Mail</label>
+          <input type="email" id="emailInput" placeholder="name@example.com" required />
+        </div>
+        <div class="auth-input-group">
+          <label>Password</label>
+          <input type="password" id="passwordInput" placeholder="••••••••" required />
+        </div>
+        <div class="auth-actions">
+          <button type="submit" class="btn-primary btn-auth" id="submitLogin">Sign In</button>
+        </div>
+      </form>
+      <div class="auth-footer">
+        Don't have an account? <a href="#" onclick="toggleAuthView('signup'); return false;">Sign Up</a>
+      </div>
+    </div>
+
+    <!-- Sign Up -->
+    <div id="signupFormView" style="display: none;">
+      <h1 class="auth-title">Create Account</h1>
+      <p class="auth-subtitle">Sign up to read and write posts</p>
+      <div class="error-msg" id="signupError"></div>
+      <form class="auth-form" id="signupForm">
+        <div class="auth-input-group">
+          <label>E-Mail</label>
+          <input type="email" id="signupEmail" placeholder="name@example.com" required />
+        </div>
+        <div class="auth-input-group">
+          <label>Password (min 6 chars)</label>
+          <input type="password" id="signupPassword" placeholder="••••••••" required />
+        </div>
+        <div class="auth-actions">
+          <button type="submit" class="btn-primary btn-auth" id="submitSignup">Sign Up</button>
+        </div>
+      </form>
+      <div class="auth-footer">
+        Already have an account? <a href="#" onclick="toggleAuthView('login'); return false;">Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MAIN SITE ================= -->
+<div class="container hidden" id="mainSite">
+  <header class="card">
+    <h1>Lowium <span class="version-tag">(β 1.0.0)</span></h1>
+    <div class="header-actions">
+      <div class="user-profile" id="userProfile" title="Edit Profile">
+        <img id="headerAvatar" class="user-avatar-small" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Avatar">
+        <span id="headerUsername" class="user-name-small">User</span>
+      </div>
+
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme" type="button">
+        <svg id="iconMoon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg id="iconSun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </button>
+      
+      <button class="btn-danger" id="logoutBtn" type="button" style="display: none;">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="editor card" id="editor">
+    <input type="text" id="postTitle" name="post_title" autocomplete="off" placeholder="Enter post title..." />
+    <textarea id="postContent" name="post_content" autocomplete="off" placeholder="Write your story here... (or press Ctrl+V to paste images)" rows="4"></textarea>
+    
+    <div class="file-upload-wrapper">
+      <label class="file-upload-label" for="postImage">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        Choose files or paste with <strong>Ctrl+V</strong>
+        <input type="file" id="postImage" accept="image/*" multiple />
+      </label>
+      <div class="preview-grid" id="previewGrid"></div>
+    </div>
+
+    <div class="row">
+      <button class="btn-primary" id="publishBtn" type="button">Publish Post</button>
+      <button class="btn-glass" id="cancelEditBtn" type="button">Cancel</button>
+    </div>
+  </div>
+
+  <div class="posts" id="postsList">
+    <div class="card empty-state"><div class="icon">⏳</div><p>Loading...</p></div>
+  </div>
+</div>
+
+<footer id="mainFooter" class="hidden" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.85rem;">
+  &copy; 2026 Ozsh's Lowium
+</footer>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 1. Create Tag (non-closable) -->
+<div class="modal-overlay" id="onboardingTagModal" style="background: var(--bg);">
+  <div class="modal card" data-lenis-prevent style="max-width: 440px; text-align: center;">
+    <h2>One last step</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem;">Choose a unique username (tag). You can change it later in your profile.</p>
+    <div class="error-msg" id="onboardingError"></div>
+    <input type="text" id="onboardingTag" placeholder="@username" maxlength="20" style="text-align: center; font-size: 1.2rem; font-family: 'Lora', serif;" />
+    <button class="btn-primary" id="submitOnboardingTag" type="button" style="margin-top: 8px;">Continue</button>
+    
+    <!-- Logout button inside onboarding -->
+    <div style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px;">
+      <button class="link-btn" id="onboardingLogoutBtn" type="button">Sign out and use another account</button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Setup Profile (closable) -->
+<div class="modal-overlay" id="onboardingProfileModal">
+  <div class="modal card" data-lenis-prevent style="max-width: 440px; text-align: center;">
+    <h2>Setup Profile</h2>
+    <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem;">Add an avatar and tell us about yourself. You can skip this for now.</p>
+    <img id="onboardingAvatarPreview" class="profile-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Preview">
+    <label class="file-upload-btn">
+      Upload Avatar
+      <input type="file" id="onboardingAvatarInput" accept="image/*" />
+    </label>
+    <textarea id="onboardingBio" placeholder="Your bio (max 160 chars)" maxlength="160" rows="3" data-lenis-prevent></textarea>
+    <div style="display: flex; gap: 10px; margin-top: 16px;">
+      <button class="btn-glass" id="skipOnboardingProfile" type="button" style="flex: 1;">Skip</button>
+      <button class="btn-primary" id="submitOnboardingProfile" type="button" style="flex: 1;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Edit Profile (normal) -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal card" data-lenis-prevent>
+    <h2>Edit Profile</h2>
+    <div class="error-msg" id="profileError"></div>
+    <img id="profileAvatarPreview" class="profile-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Preview">
+    <label class="file-upload-btn">
+      Upload Avatar (Max 5MB)
+      <input type="file" id="avatarInput" accept="image/*" />
+    </label>
+    <input type="text" id="profileDisplayName" placeholder="Display Name (optional)" maxlength="30" />
+    <input type="text" id="profileTag" placeholder="Unique Tag (e.g. @username)" maxlength="20" required />
+    <textarea id="profileBio" placeholder="Your Bio (Max 160 chars)" maxlength="160" data-lenis-prevent rows="3"></textarea>
+    <button class="btn-primary" id="submitProfile" type="button">Save Profile</button>
+  </div>
+</div>
+
+<!-- 4. View Profile -->
+<div class="modal-overlay" id="viewProfileModal">
+  <div class="modal card" data-lenis-prevent style="text-align: center;">
+    <h2 style="margin-bottom: 16px;">User Profile</h2>
+    <img id="viewProfileAvatar" class="profile-avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c9891' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'></path><circle cx='12' cy='7' r='4'></circle></svg>" alt="Avatar">
+    <div id="viewProfileName" style="font-family: 'Lora', serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 4px; color: var(--text-main); display: flex; justify-content: center; align-items: center; gap: 6px;">Username</div>
+    <div id="viewProfileTag" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">@tag</div>
+    <div id="viewProfileStatus" style="font-size: 0.8rem; font-weight: 500; color: var(--text-muted); margin-bottom: 16px;">Member</div>
+    <div id="viewProfileBio" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-main); margin-bottom: 24px;">No bio yet.</div>
+    <button class="btn-glass" style="width: 100%;" id="closeViewProfileBtn" type="button">Close</button>
+  </div>
+</div>
+
+<!-- 5. Confirm -->
+<div class="modal-overlay confirm-modal" id="confirmModal">
+  <div class="modal card" data-lenis-prevent style="max-width: 360px; text-align: center;">
+    <h2 id="confirmTitle">Confirm</h2>
+    <div class="confirm-text" id="confirmText" style="color: var(--text-muted); margin-bottom: 24px; line-height: 1.5;">Are you sure?</div>
+    <div class="confirm-actions" style="display: flex; gap: 10px;">
+      <button class="btn-glass" id="confirmCancel" type="button" style="flex: 1;">Cancel</button>
+      <button class="btn-danger-solid" id="confirmOk" type="button" style="flex: 1;">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+    
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+
+  
+  <script type="module" src="js/main.js"></script>
+
+  
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
