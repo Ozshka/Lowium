@@ -5,9 +5,6 @@ import { initAutoGrow, autoGrow, autoGrowObserver, escapeHtml, sanitizeUrl, form
 
 const $ = id => document.getElementById(id);
 
-let editingPostId = null;
-let pastedImages = [];
-
 if (window.Lenis) {
   const lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
   function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
@@ -46,7 +43,7 @@ function getOwnerBadgeHtml() {
 
 function getVerifiedBadgeHtml(isVerified) {
   if (!isVerified) return "";
-  return `<span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>`;
+  return `<span class="verified-badge" title="Verified">✓</span>`;
 }
 
 function openProfileModal(name, tag, avatar, bio, isOwner, region) {
@@ -135,8 +132,7 @@ async function renderPostsList() {
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeState.count}</span>
           </button>
-          ${isAuthor ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
-            <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
+          ${isAuthor ? `<div class="post-footer-actions">
             <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
           </div>` : ""}
         </div>
@@ -454,180 +450,15 @@ $("deleteAccountBtn").addEventListener("click", async () => {
   }
 });
 
-$("publishBtn").addEventListener("click", async () => {
+$("publishBtn").addEventListener("click", () => {
   if (!auth.currentUser) return;
-  
   if (!auth.currentProfile?.is_verified) {
     $("verificationError").style.display = "none";
     $("verificationModal").classList.add("open");
     return;
   }
-
-  const title = $("postTitle").value.trim();
-  const content = $("postContent").value.trim();
-
-  if (!title) {
-    toast("Please enter a post title.", "error");
-    return;
-  }
-  if (!content && pastedImages.length === 0) {
-    toast("Please write something or add an image.", "error");
-    return;
-  }
-
-  $("publishBtn").disabled = true;
-  $("publishBtn").textContent = editingPostId ? "Saving..." : "Publishing...";
-
-  try {
-    const imageUrls = [];
-
-    for (const dataUrl of pastedImages) {
-      if (dataUrl.startsWith("http")) {
-        imageUrls.push(dataUrl);
-      } else {
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const fileExt = blob.type.split('/')[1] || 'png';
-        const fileName = `${auth.currentUser.id}_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('posts')
-          .upload(fileName, blob, { contentType: blob.type });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('posts')
-          .getPublicUrl(fileName);
-        
-        imageUrls.push(publicUrl);
-      }
-    }
-
-    if (editingPostId) {
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({
-          title,
-          content,
-          image_urls: imageUrls
-        })
-        .eq('id', editingPostId);
-
-      if (updateError) throw updateError;
-      toast("Post updated successfully!", "success");
-    } else {
-      const { error: postError } = await supabase
-        .from('posts')
-        .insert({
-          user_id: auth.currentUser.id,
-          title,
-          content,
-          image_urls: imageUrls
-        });
-
-      if (postError) throw postError;
-      toast("Post published successfully!", "success");
-    }
-
-    editingPostId = null;
-    $("postTitle").value = "";
-    $("postContent").value = "";
-    autoGrow($("postContent"));
-    pastedImages = [];
-    renderPreviewGrid();
-    $("publishBtn").textContent = "Publish Post";
-    $("cancelEditBtn").classList.remove("visible");
-    
-    renderPostsList();
-
-  } catch (err) {
-    console.error(err);
-    toast("Error: " + err.message, "error");
-  } finally {
-    $("publishBtn").disabled = false;
-    if (!editingPostId) {
-      $("publishBtn").textContent = "Publish Post";
-    }
-  }
+  toast("Publishing is not implemented yet in this build.", "info");
 });
-
-$("cancelEditBtn").addEventListener("click", () => {
-  editingPostId = null;
-  $("postTitle").value = "";
-  $("postContent").value = "";
-  autoGrow($("postContent"));
-  pastedImages = [];
-  renderPreviewGrid();
-  $("publishBtn").textContent = "Publish Post";
-  $("cancelEditBtn").classList.remove("visible");
-});
-
-const postContentEl = $("postContent");
-const previewGrid = $("previewGrid");
-
-if (postContentEl && previewGrid) {
-  postContentEl.addEventListener("paste", (e) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    
-    let hasImage = false;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        hasImage = true;
-        const file = item.getAsFile();
-        if (!file) continue;
-        
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const dataUrl = ev.target.result;
-          pastedImages.push(dataUrl);
-          renderPreviewGrid();
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-    
-    if (hasImage) {
-      e.preventDefault();
-    }
-  });
-}
-
-function renderPreviewGrid() {
-  if (!previewGrid) return;
-  previewGrid.innerHTML = pastedImages.map((url, i) => `
-    <div class="preview-item">
-      <img src="${url}" alt="Pasted image" />
-      <button class="remove-btn" type="button" data-remove-index="${i}">×</button>
-    </div>
-  `).join("");
-  
-  previewGrid.querySelectorAll("[data-remove-index]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const idx = parseInt(btn.dataset.removeIndex, 10);
-      pastedImages.splice(idx, 1);
-      renderPreviewGrid();
-    });
-  });
-}
-
-const postImageInput = $("postImage");
-if (postImageInput) {
-  postImageInput.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
-      if (!file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        pastedImages.push(ev.target.result);
-        renderPreviewGrid();
-      };
-      reader.readAsDataURL(file);
-    });
-    postImageInput.value = "";
-  });
-}
 
 $("submitVerification").addEventListener("click", async () => {
   const message = $("verificationMessage").value.trim();
@@ -794,25 +625,6 @@ $("postsList").addEventListener("click", async (e) => {
   if (action === "toggle-like") {
     await posts.toggleLike(postId, target);
   } 
-  else if (action === "edit-post") {
-    const article = target.closest(".post");
-    const title = article.querySelector("h2").textContent;
-    const content = article.querySelector(".post-content").textContent;
-    const existingImages = article.querySelectorAll(".post-gallery img");
-    
-    editingPostId = postId;
-    $("postTitle").value = title;
-    $("postContent").value = content;
-    autoGrow($("postContent"));
-    
-    pastedImages = Array.from(existingImages).map(img => img.src);
-    renderPreviewGrid();
-    
-    $("publishBtn").textContent = "Save Changes";
-    $("cancelEditBtn").classList.add("visible");
-    
-    $("editor").scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
   else if (action === "delete-post") {
     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
       await supabase.from("posts").delete().eq("id", postId);
@@ -862,25 +674,6 @@ $("postsList").addEventListener("click", async (e) => {
             bindProfileClicks(); 
         }
       }
-    }
-  }
-  else if (action === "delete-comment") {
-    const commentId = target.dataset.commentId;
-    const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
-    if (!ok) return;
-
-    const { error } = await supabase.from("comments").delete().eq("id", commentId);
-    if (error) {
-      toast("Error deleting comment: " + error.message, "error");
-      return;
-    }
-    toast("Comment deleted.", "success");
-    
-    const body = target.closest(".comments-body");
-    if (body) {
-      body.dataset.loaded = "";
-      body.querySelector("[data-action='toggle-comments']")?.click();
-      body.click();
     }
   }
   else if (action === "submit-comment") {
