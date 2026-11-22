@@ -81,6 +81,121 @@ async function renderPostsList() {
       return;
     }
 
+    let realtimeChannel = null;
+
+function initRealtime() {
+  // Если канал уже был создан, отписываемся от старого (чтобы не дублировать)
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+  }
+
+  realtimeChannel = supabase.channel('realtime:public')
+    // 1. СЛУШАЕМ ПОСТЫ
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async (payload) => {
+      const postsList = $("postsList");
+      
+      if (payload.eventType === 'INSERT') {
+        // Если пост добавил кто-то другой
+        if (payload.new.user_id !== auth.currentUser?.id) {
+          toast("Опубликован новый пост!", "info");
+          // Чтобы отрисовать один пост, нам нужны данные автора и лайков.
+          // Проще всего вызвать renderPostsList(), но чтобы не сбить скролл, 
+          // мы проверим, не пишет ли юзер сейчас.
+          if (!isUserTyping()) renderPostsList();
+        }
+      } 
+      else if (payload.eventType === 'DELETE') {
+        // Мгновенно удаляем пост из DOM без перезагрузки
+        const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
+        if (el) el.remove();
+      } 
+      else if (payload.eventType === 'UPDATE') {
+        // Если пост отредактировали — покажем уведомление
+        if (payload.new.user_id !== auth.currentUser?.id) {
+          if (!isUserTyping()) renderPostsList();
+        }
+      }
+    })
+    
+    // 2. СЛУШАЕМ КОММЕНТАРИИ
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
+      const postId = payload.new?.post_id || payload.old?.post_id;
+      if (!postId) return;
+
+      // Ищем пост в DOM
+      const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+      if (!postEl) return;
+
+      // Обновляем счетчик комментов в шапке поста
+      const countEl = postEl.querySelector("[data-comment-count]");
+      if (countEl) {
+        let current = parseInt(countEl.textContent, 10) || 0;
+        if (payload.eventType === 'INSERT') current++;
+        if (payload.eventType === 'DELETE') current = Math.max(0, current - 1);
+        countEl.textContent = String(current);
+      }
+
+      // Если секция комментов открыта — обновляем её
+      const bodyEl = postEl.querySelector("[data-comments-body]");
+      if (bodyEl && bodyEl.classList.contains("open")) {
+        posts.clearCommentsCache(postId);
+        bodyEl.dataset.loaded = "";
+        posts.loadComments(postId, bodyEl).then(fresh => {
+          // Проверяем, не пишет ли юзер в этот момент коммент
+          const input = bodyEl.querySelector('[data-role="comment-input"]');
+          const isTypingComment = input && input.value.trim().length > 0;
+          
+          // Если пишет — не перерисовываем, чтобы не стереть текст
+          if (!isTypingComment) {
+            renderCommentsInto(bodyEl, fresh, postId);
+          }
+        });
+      }
+    })
+    
+    // 3. СЛУШАЕМ ЛАЙКИ
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
+      const postId = payload.new?.post_id || payload.old?.post_id;
+      if (!postId) return;
+
+      const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+      if (!postEl) return;
+
+      const btn = postEl.querySelector('[data-action="toggle-like"]');
+      if (!btn) return;
+
+      // Обновляем состояние лайка (без перезагрузки всего поста)
+      const likeIcon = btn.querySelector(".like-icon");
+      const countEl = btn.querySelector(".like-count");
+      
+      if (payload.eventType === 'INSERT') {
+        if (payload.new.user_id !== auth.currentUser?.id) {
+          btn.classList.add("liked");
+          likeIcon.textContent = "♥";
+          countEl.textContent = String(parseInt(countEl.textContent || 0, 10) + 1);
+        }
+      } else if (payload.eventType === 'DELETE') {
+        if (payload.old.user_id !== auth.currentUser?.id) {
+          btn.classList.remove("liked");
+          likeIcon.textContent = "♡";
+          countEl.textContent = String(Math.max(0, parseInt(countEl.textContent || 0, 10) - 1));
+        }
+      }
+    })
+    .subscribe();
+}
+
+// Вспомогательная функция: проверяем, пишет ли юзер что-то прямо сейчас
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  // Если фокус в текстовом поле, селекте или textarea
+  if (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT") {
+    return active.value.trim().length > 0; // Пишет только если поле не пустое
+  }
+  return false;
+}
+
     postsList.innerHTML = fetchedPosts.map((post, index) => {
       const postId = String(post.id);
       let imagesHtml = "";
