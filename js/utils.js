@@ -1,14 +1,6 @@
-// js/utils.js
-import { DEFAULT_AVATAR } from './config.js';
-
 export function escapeHtml(str) {
   if (str == null) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 export function sanitizeUrl(url) {
@@ -28,7 +20,6 @@ export function formatShortDate(iso) {
   return new Date(iso).toLocaleString("en-US", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-// Авто-растяжение textarea
 export function autoGrow(el) {
   if (!el || !el.classList.contains("auto-grow")) return;
   el.style.height = "auto";
@@ -65,7 +56,6 @@ export const autoGrowObserver = new MutationObserver((mutations) => {
   }
 });
 
-// Тосты и уведомления
 export function toast(message, type = "info") {
   const toastContainer = document.getElementById("toastContainer");
   if (!toastContainer) return;
@@ -84,7 +74,6 @@ export function toast(message, type = "info") {
   setTimeout(() => { if (el.parentNode) close(); }, 4000);
 }
 
-// Модалка подтверждения
 export function confirmDialog(message, opts = {}) {
   return new Promise((resolve) => {
     const modal = document.getElementById("confirmModal");
