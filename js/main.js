@@ -305,13 +305,24 @@ function bindProfileClicks() {
   document.querySelectorAll(".js-open-profile").forEach(el => {
     el.addEventListener("click", (e) => {
       e.preventDefault();
+      
+      // Вот этот лог мы добавили, чтобы проверить данные
       console.log("[profile click]", {
         name: el.dataset.name,
         tag: el.dataset.tag,
         bio: el.dataset.bio,
         region: el.dataset.region
       });
-      openProfileModal(...);
+      
+      // А тут должны быть РЕАЛЬНЫЕ аргументы, а не ...
+      openProfileModal(
+        el.dataset.name,
+        el.dataset.tag,
+        el.dataset.avatar,
+        el.dataset.bio,
+        el.dataset.owner === "true",
+        el.dataset.region
+      );
     });
   });
 }
