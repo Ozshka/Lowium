@@ -705,6 +705,22 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   transform: none;
 }
 
+#settingsBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;          /* убираем паддинг, чтобы SVG не сдвигался */
+  width: 40px;         /* фиксируем размер */
+  height: 40px;
+}
+
+#settingsBtn svg {
+  width: 20px;
+  height: 20px;
+  display: block;      /* убираем лишние отступы снизу от inline */
+  margin: 0;           /* сбрасываем возможные маргины */
+}
+
 /* Кнопка Sign Out — чтобы не плясала рядом с иконками */
 #logoutBtn {
   margin-left: 4px;
