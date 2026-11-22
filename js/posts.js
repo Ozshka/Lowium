@@ -161,5 +161,13 @@ export async function submitComment(postId, content) {
     is_owner: auth.isAdmin
   });
   commentsCache.set(postId, entry);
+
+  export function clearPostsCache() {
+  likesCache.clear();
+}
+
+export function clearCommentsCache(postId) {
+  commentsCache.delete(String(postId));
+}
   return entry.comments;
 }
