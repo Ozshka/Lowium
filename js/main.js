@@ -176,6 +176,11 @@ function renderCommentsInto(body, comments, postId) {
         const tg = c.author.tag || "";
         const badge = c.is_owner ? getOwnerBadgeHtml() : "";
         const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
+        
+        // Достаем био и регион
+        const bio = c.author.bio || "";
+        const region = c.author.region || "";
+
         return `
           <div class="comment">
             <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
@@ -185,7 +190,8 @@ function renderCommentsInto(body, comments, postId) {
                       data-name="${escapeHtml(nm)}"
                       data-tag="${escapeHtml(tg)}"
                       data-avatar="${escapeHtml(av)}"
-                      data-bio=""
+                      data-bio="${escapeHtml(bio)}"
+                      data-region="${escapeHtml(region)}"
                       data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
                 <span class="comment-date">${formatShortDate(c.created_at)}</span>
                 ${isAuth ? `<button class="comment-delete" type="button"
