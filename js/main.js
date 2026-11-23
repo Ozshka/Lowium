@@ -1198,10 +1198,6 @@ else if (action === "toggle-comments") {
     const freshComments = await posts.loadComments(postId, body);
     renderCommentsInto(body, freshComments, postId);
 
-    const countEl = sec.querySelector("[data-comment-count]");
-    if (countEl) {
-      const current = parseInt(countEl.textContent, 10) || 0;
-      countEl.textContent = String(current + 1);
     }
 
   } catch (err) {
