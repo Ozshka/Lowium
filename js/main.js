@@ -271,7 +271,7 @@ function initRealtime() {
       }
     })
     
-       // 2. СЛУШАЕМ КОММЕНТАРИИ
+    // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
@@ -291,17 +291,17 @@ function initRealtime() {
       // 2. Обновляем список комментов
       const bodyEl = postEl.querySelector("[data-comments-body]");
       if (bodyEl && bodyEl.classList.contains("open")) {
+        // Если удаление — принудительно удаляем элемент из DOM (без запросов к БД)
         if (payload.eventType === 'DELETE') {
-          // Если удаление — просто находим элемент по ID и удаляем из DOM
           const commentEl = bodyEl.querySelector(`.comment[data-comment-id="${payload.old.id}"]`);
-          if (commentEl) {
-            commentEl.remove(); // Мгновенно исчезает
-          }
-        } else {
-          // Если добавление (или что-то еще) — перезапрашиваем
+          if (commentEl) commentEl.remove();
+        } 
+        // Если добавление — перезапрашиваем
+        else {
           posts.clearCommentsCache(postId);
           bodyEl.dataset.loaded = "";
           posts.loadComments(postId, bodyEl).then(fresh => {
+            // Проверяем, печатает ли юзер, ТОЛЬКО для INSERT
             const input = bodyEl.querySelector('[data-role="comment-input"]');
             if (!input || input.value.trim().length === 0) {
               renderCommentsInto(bodyEl, fresh, postId);
