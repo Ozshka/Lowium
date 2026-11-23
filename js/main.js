@@ -8,8 +8,9 @@ const $ = id => document.getElementById(id);
 let editingPostId = null;
 let pastedImages = [];
 
+let lenis = null;
 if (window.Lenis) {
-  const lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
+  lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
   function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
   requestAnimationFrame(raf);
 }
