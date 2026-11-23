@@ -74,6 +74,63 @@ export function toast(message, type = "info") {
   setTimeout(() => { if (el.parentNode) close(); }, 4000);
 }
 
+/**
+ * Перекодирует изображение через canvas, чтобы удалить EXIF/GPS/прочие метаданные.
+ * Возвращает Blob того же (или приведённого) типа.
+ * @param {File|Blob} file
+ * @param {Object} opts { maxSize?: number, quality?: number, forceType?: string }
+ * @returns {Promise<Blob>}
+ */
+export async function stripImageMetadata(file, opts = {}) {
+  const { maxSize = 2048, quality = 0.9 } = opts;
+
+  // GIF не трогаем — canvas убьёт анимацию
+  if (file.type === "image/gif") return file;
+
+  // SVG тоже не трогаем — это вектор, canvas его растеризует
+  if (file.type === "image/svg+xml") return file;
+
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = dataUrl;
+  });
+
+  // Ограничиваем размер (чтобы не грузить 8K-фото)
+  let { width, height } = img;
+  if (Math.max(width, height) > maxSize) {
+    const k = maxSize / Math.max(width, height);
+    width = Math.round(width * k);
+    height = Math.round(height * k);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, width, height);
+
+  // Определяем выходной тип: jpeg для фото (без альфы), png для прозрачных
+  const outType =
+    file.type === "image/png" || file.type === "image/webp"
+      ? file.type
+      : "image/jpeg";
+
+  const blob = await new Promise((resolve) =>
+    canvas.toBlob(resolve, outType, quality)
+  );
+
+  return blob;
+}
+
 export function confirmDialog(message, opts = {}) {
   return new Promise((resolve) => {
     const modal = document.getElementById("confirmModal");
