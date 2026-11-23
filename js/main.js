@@ -56,8 +56,8 @@ async function refreshFeed(scrollToTop = false) {
   try {
     posts.clearPostsCache();
     await renderPostsList();
-
-    // Если просили скролл наверх — едем наверх. Иначе — возвращаемся на место.
+    
+    // Скролл
     if (scrollToTop) {
       if (lenis) lenis.scrollTo(0, { immediate: false });
       else window.scrollTo({ top: 0, behavior: "smooth" });
@@ -69,7 +69,7 @@ async function refreshFeed(scrollToTop = false) {
     hideNewPostsBanner();
     toast("Feed updated", "success");
   } catch (err) {
-    console.error("Refresh error:", err);
+    console.error("ОШИБКА ПРИ ОБНОВЛЕНИИ:", err); // <--- ВОТ ЭТО ДОБАВЬ
     toast("Could not refresh feed", "error");
   } finally {
     isRefreshing = false;
