@@ -42,18 +42,30 @@ $("themeToggle").addEventListener("click", async () => {
 
 let isRefreshing = false;
 
-async function refreshFeed() {
+async function refreshFeed(scrollToTop = false) {
   if (isRefreshing) return;
   isRefreshing = true;
 
   const btn = $("refreshBtn");
   const icon = $("refreshIcon");
+  const scrollY = window.scrollY;
+
   if (btn) btn.disabled = true;
   if (icon) icon.style.animation = "spin 0.8s linear infinite";
 
   try {
     posts.clearPostsCache();
     await renderPostsList();
+
+    // Если просили скролл наверх — едем наверх. Иначе — возвращаемся на место.
+    if (scrollToTop) {
+      if (lenis) lenis.scrollTo(0, { immediate: false });
+      else window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      if (lenis) lenis.scrollTo(scrollY, { immediate: true });
+      else window.scrollTo(0, scrollY);
+    }
+
     hideNewPostsBanner();
     toast("Feed updated", "success");
   } catch (err) {
@@ -71,16 +83,15 @@ if ($("refreshBtn")) {
 }
 
 if ($("newPostsBanner")) {
-  $("newPostsBanner").addEventListener("click", async () => {
-    hideNewPostsBanner();
-    await refreshFeed();
+  $("newPostsBanner").addEventListener("click", () => {
+    refreshFeed(true); // передаем true, чтобы скроллило наверх
+  });
+}
 
-    // Автоскролл на самый верх
-    if (lenis) {
-      lenis.scrollTo(0, { immediate: false }); // Плавный скролл через Lenis
-    } else {
-      window.scrollTo({ top: 0, behavior: "smooth" }); // Фолбэк для браузеров без Lenis
-    }
+// А обычная кнопка обновления в хедере:
+if ($("refreshBtn")) {
+  $("refreshBtn").addEventListener("click", () => {
+    refreshFeed(false); // скролл остается на месте
   });
 }
 
