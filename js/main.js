@@ -7,7 +7,13 @@ const $ = id => document.getElementById(id);
 
 let editingPostId = null;
 let pastedImages = [];
+let isRefreshing = false;
+let realtimeChannel = null;
+let pendingNewPostsCount = 0;
+let onboardingAvatarFile = null;
+let profileAvatarFile = null;
 
+// ===== LENIS SMOOTH SCROLL =====
 let lenis = null;
 if (window.Lenis) {
   lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
@@ -15,16 +21,42 @@ if (window.Lenis) {
   requestAnimationFrame(raf);
 }
 
+// ===== THEME LOGIC =====
 const savedTheme = localStorage.getItem('theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
+
 function updateThemeIcon(theme) {
   if ($("iconMoon")) $("iconMoon").style.display = theme === 'dark' ? 'none' : 'block';
   if ($("iconSun")) $("iconSun").style.display = theme === 'dark' ? 'block' : 'none';
 }
 updateThemeIcon(savedTheme);
 
+// ===== SPIN ANIMATION ON HOVER =====
+function setupSpinHover(element, innerSelector = null) {
+  if (!element) return;
+  const target = innerSelector ? element.querySelector(innerSelector) : element;
+  if (!target) return;
+
+  element.addEventListener("mouseenter", () => {
+    if (target.classList.contains("animate-spin")) return;
+    target.classList.add("animate-spin");
+    setTimeout(() => target.classList.remove("animate-spin"), 800);
+  });
+}
+
+setupSpinHover(document.getElementById("themeToggle"), "svg");
+setupSpinHover(document.getElementById("settingsBtn"), "svg");
+setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
+
+// ===== THEME TOGGLE CLICK =====
 $("themeToggle").addEventListener("click", async () => {
-  triggerSpin($("iconMoon").style.display !== 'none' ? $("iconMoon") : $("iconSun"));
+  // 1. Запускаем анимацию на видимой иконке и ждем 400мс (половину анимации)
+  const activeIcon = $("iconMoon").style.display !== 'none' ? $("iconMoon") : $("iconSun");
+  triggerSpin(activeIcon);
+  
+  await new Promise(r => setTimeout(r, 400));
+
+  // 2. Меняем тему
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   const applyTheme = () => {
@@ -32,18 +64,22 @@ $("themeToggle").addEventListener("click", async () => {
     localStorage.setItem('theme', next);
     updateThemeIcon(next);
   };
+
   if (!document.startViewTransition) { applyTheme(); return; }
+  
   const x = window.innerWidth, y = 0, endRadius = Math.hypot(window.innerWidth, window.innerHeight);
   const transition = document.startViewTransition(applyTheme);
+  
   try {
     await transition.ready;
-    document.documentElement.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`] },
-      { duration: 550, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' });
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`] },
+      { duration: 550, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', pseudoElement: '::view-transition-new(root)' }
+    );
   } catch (e) {}
 });
 
-let isRefreshing = false;
-
+// ===== REFRESH FEED =====
 async function refreshFeed(scrollToTop = false) {
   if (isRefreshing) return;
   isRefreshing = true;
@@ -59,7 +95,6 @@ async function refreshFeed(scrollToTop = false) {
     posts.clearPostsCache();
     await renderPostsList();
     
-    // Скролл
     if (scrollToTop) {
       if (lenis) lenis.scrollTo(0, { immediate: false });
       else window.scrollTo({ top: 0, behavior: "smooth" });
@@ -71,7 +106,7 @@ async function refreshFeed(scrollToTop = false) {
     hideNewPostsBanner();
     toast("Feed updated", "success");
   } catch (err) {
-    console.error("ОШИБКА ПРИ ОБНОВЛЕНИИ:", err); // <--- ВОТ ЭТО ДОБАВЬ
+    console.error("ОШИБКА ПРИ ОБНОВЛЕНИИ:", err);
     toast("Could not refresh feed", "error");
   } finally {
     isRefreshing = false;
@@ -80,24 +115,10 @@ async function refreshFeed(scrollToTop = false) {
   }
 }
 
-if ($("refreshBtn")) {
-  $("refreshBtn").addEventListener("click", refreshFeed);
-}
+if ($("refreshBtn")) $("refreshBtn").addEventListener("click", () => refreshFeed(false));
+if ($("newPostsBanner")) $("newPostsBanner").addEventListener("click", () => refreshFeed(true));
 
-if ($("newPostsBanner")) {
-  $("newPostsBanner").addEventListener("click", () => {
-    refreshFeed(true); // передаем true, чтобы скроллило наверх
-  });
-}
-
-// А обычная кнопка обновления в хедере:
-if ($("refreshBtn")) {
-  $("refreshBtn").addEventListener("click", () => {
-    refreshFeed(false); // скролл остается на месте
-  });
-}
-
-
+// ===== BADGES =====
 function getOwnerBadgeHtml() {
   return `<span class="owner-badge" title="Owner"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>`;
 }
@@ -107,6 +128,7 @@ function getVerifiedBadgeHtml(isVerified) {
   return `<span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>`;
 }
 
+// ===== PROFILE MODAL =====
 function openProfileModal(name, tag, avatar, bio, isOwner, region) {
   $("viewProfileName").innerHTML = escapeHtml(name || "User") + (isOwner ? getOwnerBadgeHtml() : "");
   $("viewProfileTag").textContent = tag || "";
@@ -117,7 +139,6 @@ function openProfileModal(name, tag, avatar, bio, isOwner, region) {
 }
 
 $("userProfile").addEventListener("click", () => {
-  triggerSpin($("headerAvatar"));
   if (!auth.currentProfile) return;
   openProfileModal(
     auth.currentProfile.display_name || auth.currentProfile.tag,
@@ -129,6 +150,23 @@ $("userProfile").addEventListener("click", () => {
   );
 });
 
+function bindProfileClicks() {
+  document.querySelectorAll(".js-open-profile").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      openProfileModal(
+        el.dataset.name,
+        el.dataset.tag,
+        el.dataset.avatar,
+        el.dataset.bio,
+        el.dataset.owner === "true",
+        el.dataset.region
+      );
+    });
+  });
+}
+
+// ===== RENDER POSTS =====
 async function renderPostsList() {
   const postsList = $("postsList");
   try {
@@ -140,7 +178,7 @@ async function renderPostsList() {
       return;
     }
 
-      postsList.innerHTML = fetchedPosts.map((post, index) => {
+    postsList.innerHTML = fetchedPosts.map((post, index) => {
       const postId = String(post.id);
       let imagesHtml = "";
       const rawImages = post.image_urls?.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
@@ -152,8 +190,8 @@ async function renderPostsList() {
         </div>`;
       }
 
-    const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
-      const canManage = isAuthor || auth.isAdmin; // <-- Админ может всё
+      const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
+      const canManage = isAuthor || auth.isAdmin;
       
       const authorAvatar = sanitizeUrl(post.author.avatar_url) || DEFAULT_AVATAR;
       const authorName = post.author.display_name || post.author.tag || "Anonymous";
@@ -222,12 +260,7 @@ async function renderPostsList() {
   }
 }
 
-
-
- let realtimeChannel = null;
-
-let pendingNewPostsCount = 0;
-
+// ===== NEW POSTS BANNER =====
 function showNewPostsBanner(count) {
   pendingNewPostsCount += count;
   const banner = $("newPostsBanner");
@@ -245,53 +278,47 @@ function hideNewPostsBanner() {
   if (banner) banner.hidden = true;
 }
 
-function initRealtime() {
-  // Если канал уже был создан, отписываемся от старого (чтобы не дублировать)
-  if (realtimeChannel) {
-    supabase.removeChannel(realtimeChannel);
+// ===== REALTIME =====
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  if (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT") {
+    return active.value.trim().length > 0;
   }
+  return false;
+}
+
+function initRealtime() {
+  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
 
   realtimeChannel = supabase.channel('realtime:public')
-    // 1. СЛУШАЕМ ПОСТЫ
+    // 1. Посты
     .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async (payload) => {
-      const postsList = $("postsList");
-      
       if (payload.eventType === 'INSERT') {
-        if (payload.new.user_id !== auth.currentUser?.id) {
-          showNewPostsBanner(1);
-        }
+        if (payload.new.user_id !== auth.currentUser?.id) showNewPostsBanner(1);
       }
       else if (payload.eventType === 'DELETE') {
-        // Мгновенно удаляем пост из DOM без перезагрузки
         const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
         if (el) el.remove();
       } 
       else if (payload.eventType === 'UPDATE') {
-        // Если пост отредактировали — покажем уведомление
-        if (payload.new.user_id !== auth.currentUser?.id) {
-          if (!isUserTyping()) renderPostsList();
-        }
+        if (payload.new.user_id !== auth.currentUser?.id && !isUserTyping()) renderPostsList();
       }
     })
-    
-          // 2. СЛУШАЕМ КОММЕНТАРИИ
+    // 2. Комментарии
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
       let postId = payload.new?.post_id || payload.old?.post_id;
 
-      // Запасной план для DELETE: ищем postId через кнопку удаления
+      // Запасной план для DELETE
       if (payload.eventType === 'DELETE' && !postId) {
         const btnEl = document.querySelector(`[data-action="delete-comment"][data-comment-id="${payload.old.id}"]`);
-        if (btnEl) {
-          postId = btnEl.dataset.postId;
-        }
+        if (btnEl) postId = btnEl.dataset.postId;
       }
 
       if (!postId) return;
-
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
-      // Обновляем счетчик
       const countEl = postEl.querySelector("[data-comment-count]");
       if (countEl) {
         let current = parseInt(countEl.textContent, 10) || 0;
@@ -300,15 +327,12 @@ function initRealtime() {
         countEl.textContent = String(current);
       }
 
-      // Обновляем список комментов
       const bodyEl = postEl.querySelector("[data-comments-body]");
       if (bodyEl && bodyEl.classList.contains("open")) {
         if (payload.eventType === 'DELETE') {
-          // Удаляем коммент из DOM
           const commentEl = bodyEl.querySelector(`.comment[data-comment-id="${payload.old.id}"]`);
           if (commentEl) commentEl.remove();
         } else {
-          // Перезапрашиваем при добавлении
           posts.clearCommentsCache(postId);
           bodyEl.dataset.loaded = "";
           posts.loadComments(postId, bodyEl).then(fresh => {
@@ -320,8 +344,7 @@ function initRealtime() {
         }
       }
     })
-    
-    // 3. СЛУШАЕМ ЛАЙКИ
+    // 3. Лайки
     .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
@@ -332,7 +355,6 @@ function initRealtime() {
       const btn = postEl.querySelector('[data-action="toggle-like"]');
       if (!btn) return;
 
-      // Обновляем состояние лайка (без перезагрузки всего поста)
       const likeIcon = btn.querySelector(".like-icon");
       const countEl = btn.querySelector(".like-count");
       
@@ -341,8 +363,9 @@ function initRealtime() {
           btn.classList.add("liked");
           likeIcon.textContent = "♥";
           countEl.textContent = String(parseInt(countEl.textContent || 0, 10) + 1);
-
-            cached.count++;
+          const k = String(postId);
+          const cached = posts.likesCache.get(k) || { count: 0, liked: false };
+          cached.count++;
           posts.likesCache.set(k, cached);
         }
       } else if (payload.eventType === 'DELETE') {
@@ -350,32 +373,28 @@ function initRealtime() {
           btn.classList.remove("liked");
           likeIcon.textContent = "♡";
           countEl.textContent = String(Math.max(0, parseInt(countEl.textContent || 0, 10) - 1));
-
-           cached.count = Math.max(0, cached.count - 1);
+          const k = String(postId);
+          const cached = posts.likesCache.get(k) || { count: 0, liked: false };
+          cached.count = Math.max(0, cached.count - 1);
           posts.likesCache.set(k, cached);
         }
       }
     })
-
-    // 4. СЛУШАЕМ ЗАЯВКИ НА ВЕРИФИКАЦИЮ
+    // 4. Верификация
     .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
-      // Реагируем только если текущий юзер — админ
       if (!auth.isAdmin) return;
-
-      // Если пришла новая заявка — показываем тост
       if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
         toast("Новая заявка на верификацию!", "info");
       }
-
-      // Обновляем блок заявок в ленте (чтобы добавились новые или исчезли одобренные)
       renderPendingVerifications();
     })
-    
-    .subscribe();
-    
+    .subscribe((status, err) => {
+      console.log("🔥 Realtime Status:", status);
+      if (err) console.error("🔥 Realtime Error:", err);
+    });
 }
 
-
+// ===== RENDER COMMENTS =====
 function renderCommentsInto(body, comments, postId) {
   if (!comments) {
     body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
@@ -391,13 +410,11 @@ function renderCommentsInto(body, comments, postId) {
         const tg = c.author.tag || "";
         const badge = c.is_owner ? getOwnerBadgeHtml() : "";
         const vBadge = getVerifiedBadgeHtml(c.author.is_verified);
-        
-        // Достаем био и регион
         const bio = c.author.bio || "";
         const region = c.author.region || "";
 
         return `
-     <div class="comment" data-comment-id="${escapeHtml(c.id)}">
+          <div class="comment" data-comment-id="${escapeHtml(c.id)}">
             <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
             <div class="comment-body-text">
               <div class="comment-head">
@@ -432,46 +449,28 @@ function renderCommentsInto(body, comments, postId) {
   bindProfileClicks();
 }
 
+// ===== PENDING VERIFICATIONS =====
 async function renderPendingVerifications() {
   if (!auth.isAdmin) return;
   
   const existing = document.getElementById("pendingVerificationsBlock");
   if (existing) existing.remove();
   
-  // 1. Получаем сами реквесты БЕЗ джоина
   const { data: requests, error } = await supabase
     .from("verification_requests")
     .select("id, message, created_at, user_id")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
   
-  if (error) {
-    console.error("Verification request error:", error);
-    return;
-  }
-  
+  if (error) return console.error("Verification request error:", error);
   if (!requests || requests.length === 0) return;
 
-  // 2. Собираем все user_id из реквестов
   const userIds = [...new Set(requests.map(r => r.user_id))];
-
-  // 3. Получаем профили этих юзеров
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, tag, display_name")
-    .in("id", userIds);
-
-  // 4. Делаем словарь профилей для быстрого поиска
+  const { data: profiles } = await supabase.from("profiles").select("id, tag, display_name").in("id", userIds);
   const profileMap = {};
   (profiles || []).forEach(p => { profileMap[p.id] = p; });
-
-  // 5. Привязываем профили к реквестам (эмулируем join)
-  const data = requests.map(r => ({
-    ...r,
-    profiles: profileMap[r.user_id] || null
-  }));
+  const data = requests.map(r => ({ ...r, profiles: profileMap[r.user_id] || null }));
   
-  // Дальше идет твой обычный рендер
   const section = document.createElement("div");
   section.id = "pendingVerificationsBlock";
   section.className = "card";
@@ -498,7 +497,7 @@ async function renderPendingVerifications() {
   section.querySelectorAll("[data-approve]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const { error } = await supabase.from("verification_requests").update({ status: "approved" }).eq("id", btn.dataset.approve);
-      if (error) { toast("Error: " + error.message, "error"); return; }
+      if (error) return toast("Error: " + error.message, "error");
       toast("User approved!", "success");
       section.remove();
       renderPendingVerifications();
@@ -508,7 +507,7 @@ async function renderPendingVerifications() {
   section.querySelectorAll("[data-reject]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const { error } = await supabase.from("verification_requests").update({ status: "rejected" }).eq("id", btn.dataset.reject);
-      if (error) { toast("Error: " + error.message, "error"); return; }
+      if (error) return toast("Error: " + error.message, "error");
       toast("User rejected.", "info");
       section.remove();
       renderPendingVerifications();
@@ -516,22 +515,7 @@ async function renderPendingVerifications() {
   });
 }
 
-function bindProfileClicks() {
-  document.querySelectorAll(".js-open-profile").forEach(el => {
-    el.addEventListener("click", (e) => {
-      e.preventDefault();
-      openProfileModal(
-        el.dataset.name,
-        el.dataset.tag,
-        el.dataset.avatar,
-        el.dataset.bio,
-        el.dataset.owner === "true",
-        el.dataset.region
-      );
-    });
-  });
-}
-
+// ===== START APP =====
 async function startApp() {
   try {
     await auth.refreshSession(
@@ -578,6 +562,7 @@ async function startApp() {
   }
 }
 
+// ===== AUTH FORMS =====
 window.toggleAuthView = function(view) {
   if (view === 'signup') {
     $("loginFormView").style.display = "none";
@@ -686,10 +671,10 @@ $("signupForm").addEventListener("submit", async (e) => {
   }
 });
 
+// ===== SETTINGS =====
 $("logoutBtn").addEventListener("click", auth.handleLogout);
 
 $("settingsBtn").addEventListener("click", () => {
-  triggerSpin($("settingsBtn").querySelector("svg"));
   $("settingsModal").classList.add("open");
   $("newEmail").value = "";
   $("newPass").value = "";
@@ -697,9 +682,7 @@ $("settingsBtn").addEventListener("click", () => {
   $("passError").style.display = "none";
 });
 
-$("closeSettingsBtn").addEventListener("click", () => {
-  $("settingsModal").classList.remove("open");
-});
+$("closeSettingsBtn").addEventListener("click", () => $("settingsModal").classList.remove("open"));
 
 $("updateEmailBtn").addEventListener("click", async () => {
   const newEmail = $("newEmail").value.trim();
@@ -721,11 +704,6 @@ $("updateEmailBtn").addEventListener("click", async () => {
     $("newEmail").value = "";
   }
 });
-
-
-
-
-  
 
 $("updatePassBtn").addEventListener("click", async () => {
   const newPass = $("newPass").value;
@@ -751,16 +729,12 @@ $("updatePassBtn").addEventListener("click", async () => {
 $("deleteAccountBtn").addEventListener("click", async () => {
   const ok = await confirmDialog("Are you absolutely sure you want to delete your account? This action cannot be undone.", { title: "Delete Account", okText: "Delete" });
   if (!ok) return;
-
   const { error } = await supabase.rpc('delete_user');
-  if (error) {
-    toast("Error deleting account: " + error.message, "error");
-  } else {
-    await supabase.auth.signOut();
-    window.location.reload();
-  }
+  if (error) toast("Error deleting account: " + error.message, "error");
+  else { await supabase.auth.signOut(); window.location.reload(); }
 });
 
+// ===== EDITOR / PUBLISH =====
 $("publishBtn").addEventListener("click", async () => {
   if (!auth.currentUser) return;
   
@@ -773,41 +747,29 @@ $("publishBtn").addEventListener("click", async () => {
   const title = $("postTitle").value.trim();
   const content = $("postContent").value.trim();
 
-  if (!title) {
-    toast("Please enter a post title.", "error");
-    return;
-  }
-  if (!content && pastedImages.length === 0) {
-    toast("Please write something or add an image.", "error");
-    return;
-  }
+  if (!title) return toast("Please enter a post title.", "error");
+  if (!content && pastedImages.length === 0) return toast("Please write something or add an image.", "error");
 
   $("publishBtn").disabled = true;
   $("publishBtn").textContent = editingPostId ? "Saving..." : "Publishing...";
 
   try {
-        const imageUrls = [];
+    const imageUrls = [];
 
     for (const dataUrl of pastedImages) {
       if (dataUrl.startsWith("http")) {
-        imageUrls.push(dataUrl); // уже загруженная — не трогаем
+        imageUrls.push(dataUrl);
       } else {
         const res = await fetch(dataUrl);
         const rawBlob = await res.blob();
-
-        // Чистим EXIF + ограничиваем размер
         const cleanBlob = await stripImageMetadata(rawBlob, { maxSize: 2048, quality: 0.9 });
-
         const fileExt = cleanBlob.type === "image/png" ? "png"
                       : cleanBlob.type === "image/webp" ? "webp"
                       : cleanBlob.type === "image/gif" ? "gif"
                       : "jpg";
         const fileName = `${auth.currentUser.id}_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('posts')
-          .upload(fileName, cleanBlob, { contentType: cleanBlob.type });
-
+        const { error: uploadError } = await supabase.storage.from('posts').upload(fileName, cleanBlob, { contentType: cleanBlob.type });
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(fileName);
@@ -816,27 +778,11 @@ $("publishBtn").addEventListener("click", async () => {
     }
 
     if (editingPostId) {
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({
-          title,
-          content,
-          image_urls: imageUrls
-        })
-        .eq('id', editingPostId);
-
+      const { error: updateError } = await supabase.from('posts').update({ title, content, image_urls: imageUrls }).eq('id', editingPostId);
       if (updateError) throw updateError;
       toast("Post updated successfully!", "success");
     } else {
-      const { error: postError } = await supabase
-        .from('posts')
-        .insert({
-          user_id: auth.currentUser.id,
-          title,
-          content,
-          image_urls: imageUrls
-        });
-
+      const { error: postError } = await supabase.from('posts').insert({ user_id: auth.currentUser.id, title, content, image_urls: imageUrls });
       if (postError) throw postError;
       toast("Post published successfully!", "success");
     }
@@ -858,9 +804,7 @@ $("publishBtn").addEventListener("click", async () => {
     toast("Error: " + err.message, "error");
   } finally {
     $("publishBtn").disabled = false;
-    if (!editingPostId) {
-      $("publishBtn").textContent = "Publish Post";
-    }
+    if (!editingPostId) $("publishBtn").textContent = "Publish Post";
   }
 });
 
@@ -889,20 +833,15 @@ if (postContentEl && previewGrid) {
         hasImage = true;
         const file = item.getAsFile();
         if (!file) continue;
-        
         const reader = new FileReader();
         reader.onload = (ev) => {
-          const dataUrl = ev.target.result;
-          pastedImages.push(dataUrl);
+          pastedImages.push(ev.target.result);
           renderPreviewGrid();
         };
         reader.readAsDataURL(file);
       }
     }
-    
-    if (hasImage) {
-      e.preventDefault();
-    }
+    if (hasImage) e.preventDefault();
   });
 }
 
@@ -941,6 +880,7 @@ if (postImageInput) {
   });
 }
 
+// ===== VERIFICATION =====
 $("submitVerification").addEventListener("click", async () => {
   const message = $("verificationMessage").value.trim();
   const errorEl = $("verificationError");
@@ -955,20 +895,14 @@ $("submitVerification").addEventListener("click", async () => {
   $("submitVerification").disabled = true;
   $("submitVerification").textContent = "Submitting...";
   
-  const { error } = await supabase.from("verification_requests").insert({
-    user_id: auth.currentUser.id,
-    message
-  });
+  const { error } = await supabase.from("verification_requests").insert({ user_id: auth.currentUser.id, message });
   
   $("submitVerification").disabled = false;
   $("submitVerification").textContent = "Submit Request";
   
   if (error) {
-    if (error.code === "23505") {
-      errorEl.textContent = "You already have a pending request. Please wait.";
-    } else {
-      errorEl.textContent = error.message;
-    }
+    if (error.code === "23505") errorEl.textContent = "You already have a pending request. Please wait.";
+    else errorEl.textContent = error.message;
     errorEl.style.display = "block";
   } else {
     toast("Request sent! Wait for admin approval.", "success");
@@ -977,14 +911,10 @@ $("submitVerification").addEventListener("click", async () => {
   }
 });
 
-$("cancelVerification").addEventListener("click", () => {
-  $("verificationModal").classList.remove("open");
-});
+$("cancelVerification").addEventListener("click", () => $("verificationModal").classList.remove("open"));
+$("verificationModal").addEventListener("click", (e) => { if (e.target === $("verificationModal")) $("verificationModal").classList.remove("open"); });
 
-$("verificationModal").addEventListener("click", (e) => {
-  if (e.target === $("verificationModal")) $("verificationModal").classList.remove("open");
-});
-
+// ===== ONBOARDING =====
 $("submitOnboardingTag").addEventListener("click", async () => {
   const tag = $("onboardingTag").value.trim();
   const errorEl = $("onboardingError");
@@ -1014,7 +944,6 @@ $("submitOnboardingTag").addEventListener("click", async () => {
 
 $("onboardingLogoutBtn").addEventListener("click", auth.handleLogout);
 
-let onboardingAvatarFile = null;
 $("onboardingAvatarInput").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1033,15 +962,12 @@ $("submitOnboardingProfile").addEventListener("click", async () => {
   $("submitOnboardingProfile").textContent = "Saving...";
 
   try {
-    await auth.updateProfile(
-      {
-        display_name: auth.currentProfile?.display_name || auth.currentProfile?.tag,
-        tag: auth.currentProfile?.tag,
-        bio: bio || null,
-        region: auth.currentProfile?.region || "Unknown"
-      },
-      onboardingAvatarFile
-    );
+    await auth.updateProfile({
+      display_name: auth.currentProfile?.display_name || auth.currentProfile?.tag,
+      tag: auth.currentProfile?.tag,
+      bio: bio || null,
+      region: auth.currentProfile?.region || "Unknown"
+    }, onboardingAvatarFile);
     toast("Profile set up successfully!", "success");
     $("onboardingProfileModal").classList.remove("open");
     startApp();
@@ -1053,7 +979,7 @@ $("submitOnboardingProfile").addEventListener("click", async () => {
   }
 });
 
-let profileAvatarFile = null;
+// ===== EDIT PROFILE =====
 $("avatarInput").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1079,10 +1005,7 @@ $("submitProfile").addEventListener("click", async () => {
   $("submitProfile").textContent = "Saving...";
 
   try {
-    await auth.updateProfile(
-      { display_name: displayName || null, tag, bio: bio || null, region },
-      profileAvatarFile
-    );
+    await auth.updateProfile({ display_name: displayName || null, tag, bio: bio || null, region }, profileAvatarFile);
     toast("Profile updated!", "success");
     $("profileModal").classList.remove("open");
     $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User") + (auth.isAdmin ? getOwnerBadgeHtml() : "") + getVerifiedBadgeHtml(auth.currentProfile?.is_verified);
@@ -1096,6 +1019,25 @@ $("submitProfile").addEventListener("click", async () => {
   }
 });
 
+$("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
+
+$("openEditProfileBtn").addEventListener("click", () => {
+  $("viewProfileModal").classList.remove("open");
+  $("profileAvatarPreview").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
+  $("profileDisplayName").value = auth.currentProfile?.display_name || "";
+  $("profileTag").value = auth.currentProfile?.tag || "";
+  $("profileBio").value = auth.currentProfile?.bio || "";
+  $("profileRegion").value = auth.currentProfile?.region || "Unknown";
+  profileAvatarFile = null;
+  $("profileModal").classList.add("open");
+});
+
+// ===== GLOBAL MODAL CLOSES =====
+$("viewProfileModal").addEventListener("click", (e) => { if (e.target === $("viewProfileModal")) $("viewProfileModal").classList.remove("open"); });
+$("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").classList.remove("open"); });
+$("settingsModal").addEventListener("click", (e) => { if (e.target === $("settingsModal")) $("settingsModal").classList.remove("open"); });
+
+// ===== POSTS LIST EVENT DELEGATION =====
 $("postsList").addEventListener("click", async (e) => {
   const target = e.target.closest("[data-action]");
   if (!target) return;
@@ -1125,13 +1067,11 @@ $("postsList").addEventListener("click", async (e) => {
     
     $("editor").scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
- else if (action === "delete-post") {
+  else if (action === "delete-post") {
     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
       const { error } = await supabase.from("posts").delete().eq("id", postId);
-      if (error) {
-        toast("Error deleting post: " + error.message, "error");
-        return;
-      }
+      if (error) return toast("Error deleting post: " + error.message, "error");
+      
       const postEl = target.closest(".post");
       if (postEl) postEl.remove();
       toast("Post deleted.", "success");
@@ -1141,84 +1081,81 @@ $("postsList").addEventListener("click", async (e) => {
       }
     }
   }
-else if (action === "toggle-comments") {
-  const sec = target.closest(".comments-section");
-  const body = sec.querySelector("[data-comments-body]");
-  if (body.classList.contains("open")) {
-    body.classList.remove("open");
-  } else {
-    body.classList.add("open");
-    if (!body.dataset.loaded) {
-      try {
-        const comments = await posts.loadComments(postId, body);
-        renderCommentsInto(body, comments, postId);
-      } catch (err) {
-        console.error(err);
-        body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
-        body.dataset.loaded = "true";
-      }
-    }
-  }
-}
-     else if (action === "delete-comment") {
-      const commentId = target.dataset.commentId;
-      const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
-      if (!ok) return;
-
-      try {
-        await posts.deleteComment(commentId, postId);
-        toast("Comment deleted.", "success");
-        // Всё остальное (счетчик, перерисовку) сделает Realtime!
-      } catch (err) {
-        toast("Error deleting comment: " + err.message, "error");
-      }
-    }
-    else if (action === "submit-comment") {
-      if (!auth.currentProfile?.is_verified) {
-        $("verificationError").style.display = "none";
-        $("verificationModal").classList.add("open");
-        return;
-      }
-      const sec = target.closest(".comments-section");
-      const textarea = sec.querySelector('[data-role="comment-input"]');
-      const content = textarea.value.trim();
-      if (!content) return;
-
-      try {
-        await posts.submitComment(postId, content);
-        textarea.value = ""; // Очистили поле, и всё.
-        // Realtime сам увеличит счетчик и добавит коммент в открытую секцию.
-      } catch (err) {
-        if (err.message === "VERIFICATION_REQUIRED") {
-          $("verificationError").style.display = "none";
-          $("verificationModal").classList.add("open");
-        } else {
-          toast("Error: " + err.message, "error");
+  else if (action === "toggle-comments") {
+    const sec = target.closest(".comments-section");
+    const body = sec.querySelector("[data-comments-body]");
+    if (body.classList.contains("open")) {
+      body.classList.remove("open");
+    } else {
+      body.classList.add("open");
+      if (!body.dataset.loaded) {
+        try {
+          const comments = await posts.loadComments(postId, body);
+          renderCommentsInto(body, comments, postId);
+        } catch (err) {
+          console.error(err);
+          body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
+          body.dataset.loaded = "true";
         }
       }
     }
+  }
+  else if (action === "delete-comment") {
+    const commentId = target.dataset.commentId;
+    const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
+    if (!ok) return;
+
+    try {
+      await posts.deleteComment(commentId, postId);
+      toast("Comment deleted.", "success");
+    } catch (err) {
+      toast("Error deleting comment: " + err.message, "error");
+    }
+  }
+  else if (action === "submit-comment") {
+    if (!auth.currentProfile?.is_verified) {
+      $("verificationError").style.display = "none";
+      $("verificationModal").classList.add("open");
+      return;
+    }
+    const sec = target.closest(".comments-section");
+    const textarea = sec.querySelector('[data-role="comment-input"]');
+    const content = textarea.value.trim();
+    if (!content) return;
+
+    try {
+      await posts.submitComment(postId, content);
+      textarea.value = ""; 
+    } catch (err) {
+      if (err.message === "VERIFICATION_REQUIRED") {
+        $("verificationError").style.display = "none";
+        $("verificationModal").classList.add("open");
+      } else {
+        toast("Error: " + err.message, "error");
+      }
+    }
+  }
 });
 
- $("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
-
-$("openEditProfileBtn").addEventListener("click", () => {
-  $("viewProfileModal").classList.remove("open");
-  
-  // Заполняем форму текущими данными профиля
-  $("profileAvatarPreview").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
-  $("profileDisplayName").value = auth.currentProfile?.display_name || "";
-  $("profileTag").value = auth.currentProfile?.tag || "";
-  $("profileBio").value = auth.currentProfile?.bio || "";
-  $("profileRegion").value = auth.currentProfile?.region || "Unknown";
-  profileAvatarFile = null;
-
-  $("profileModal").classList.add("open");
+// ===== IMAGE VIEWER =====
+document.addEventListener("click", (e) => {
+  if (e.target.matches(".post-gallery img")) {
+    $("imageViewerImg").src = e.target.src;
+    $("imageViewer").classList.add("open");
+  }
 });
 
-$("viewProfileModal").addEventListener("click", (e) => { if (e.target === $("viewProfileModal")) $("viewProfileModal").classList.remove("open"); });
-$("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").classList.remove("open"); });
-$("settingsModal").addEventListener("click", (e) => { if (e.target === $("settingsModal")) $("settingsModal").classList.remove("open"); });
+$("closeImageViewer").addEventListener("click", () => $("imageViewer").classList.remove("open"));
 
+$("imageViewer").addEventListener("click", (e) => {
+  if (e.target === $("imageViewer") || e.target === $("imageViewerImg")) $("imageViewer").classList.remove("open");
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("imageViewer").classList.contains("open")) $("imageViewer").classList.remove("open");
+});
+
+// ===== GLOBAL ERRORS =====
 window.addEventListener("error", (event) => {
   console.error("Global error:", event.error);
   const preloader = document.getElementById("preloader");
@@ -1228,72 +1165,17 @@ window.addEventListener("error", (event) => {
   }
 });
 
-// ===== Image Viewer (Zoom) =====
-document.addEventListener("click", (e) => {
-  if (e.target.matches(".post-gallery img")) {
-    $("imageViewerImg").src = e.target.src;
-    $("imageViewer").classList.add("open");
-  }
-});
-
-$("closeImageViewer").addEventListener("click", () => {
-  $("imageViewer").classList.remove("open");
-});
-
-$("imageViewer").addEventListener("click", (e) => {
-  if (e.target === $("imageViewer") || e.target === $("imageViewerImg")) {
-    $("imageViewer").classList.remove("open");
-  }
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && $("imageViewer").classList.contains("open")) {
-    $("imageViewer").classList.remove("open");
-  }
-});
-// ===== /Image Viewer =====
-
-
-
-autoGrowObserver.observe(document.body, { childList: true, subtree: true });
-
-
-// ===== Anti right-click on images =====
+// ===== ANTI RIGHT CLICK =====
 document.addEventListener("contextmenu", (e) => {
   if (e.target.matches("img, .post-gallery img, .post-author-avatar, .comment-avatar, .user-avatar-small, .profile-avatar-preview, #imageViewerImg")) {
     e.preventDefault();
   }
 }, { capture: true });
 
-// Дополнительно: блокируем drag-and-drop картинок (перетаскивание в новую вкладку)
 document.addEventListener("dragstart", (e) => {
   if (e.target.matches("img")) e.preventDefault();
 }, { capture: true });
 
-
-function setupSpinHover(element, innerSelector = null) {
-  if (!element) return;
-  
-  // Нам нужен элемент, который будет крутиться (либо сам element, либо его внутренний SVG)
-  const target = innerSelector ? element.querySelector(innerSelector) : element;
-  if (!target) return;
-
-  element.addEventListener("mouseenter", () => {
-    // Если анимация уже идет, не перезапускаем её, чтобы не было рывков
-    if (target.classList.contains("animate-spin")) return;
-    
-    target.classList.add("animate-spin");
-    
-    // Убираем класс ровно через 0.8 секунды (время анимации)
-    setTimeout(() => {
-      target.classList.remove("animate-spin");
-    }, 800);
-  });
-}
-
-// Привязываем к нужным элементам
-setupSpinHover(document.getElementById("themeToggle"), "svg");
-setupSpinHover(document.getElementById("settingsBtn"), "svg");
-setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small"); // Крутим только аватарку внутри профиля
-
+// ===== INIT =====
+autoGrowObserver.observe(document.body, { childList: true, subtree: true });
 startApp();
