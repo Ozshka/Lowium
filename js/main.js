@@ -48,17 +48,18 @@ setupSpinHover(document.getElementById("themeToggle"), "svg");
 setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
-// ===== THEME TOGGLE CLICK =====
 $("themeToggle").addEventListener("click", async () => {
-  // 1. Запускаем анимацию на видимой иконке и ждем 400мс (половину анимации)
-  const activeIcon = $("iconMoon").style.display !== 'none' ? $("iconMoon") : $("iconSun");
-  triggerSpin(activeIcon);
-  
+  // Крутим ОБЕ иконки одновременно
+  triggerSpin($("iconMoon"));
+  triggerSpin($("iconSun"));
+
+  // Ждем 400 мс (половину анимации)
   await new Promise(r => setTimeout(r, 400));
 
-  // 2. Меняем тему
+  // Меняем тему
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
+  
   const applyTheme = () => {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
