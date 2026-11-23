@@ -1173,6 +1173,7 @@ else if (action === "toggle-comments") {
         }
       }
     }
+});
 
  $("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
 
