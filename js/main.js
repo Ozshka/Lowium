@@ -49,14 +49,8 @@ setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
 $("themeToggle").addEventListener("click", async () => {
-  // Крутим ОБЕ иконки одновременно
-  triggerSpin($("iconMoon"));
-  triggerSpin($("iconSun"));
-
-  // Ждем 400 мс (половину анимации)
-  await new Promise(r => setTimeout(r, 400));
-
-  // Меняем тему
+  // Убрали triggerSpin и setTimeout, чтобы клик срабатывал мгновенно
+  
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   
