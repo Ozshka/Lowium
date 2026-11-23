@@ -131,8 +131,7 @@ export async function loadComments(postId, bodyEl) {
     .eq("post_id", postId)
     .order("created_at", { ascending: true })
     .abortSignal(new AbortController().signal);
-  
-  const { data: comments, error } = await supabase.from("comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
+
   if (error) { bodyEl.innerHTML = `<div class="comments-empty">Could not load comments.</div>`; return; }
   
   const userIds = [...new Set((comments || []).map(c => c.user_id))];
