@@ -300,6 +300,7 @@ function initRealtime() {
         });
       }
     })
+    
     // 3. СЛУШАЕМ ЛАЙКИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
