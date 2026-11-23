@@ -54,6 +54,7 @@ async function refreshFeed() {
   try {
     posts.clearPostsCache();
     await renderPostsList();
+    hideNewPostsBanner();
     toast("Feed updated", "success");
   } catch (err) {
     console.error("Refresh error:", err);
@@ -67,6 +68,15 @@ async function refreshFeed() {
 
 if ($("refreshBtn")) {
   $("refreshBtn").addEventListener("click", refreshFeed);
+}
+
+if ($("newPostsBanner")) {
+  $("newPostsBanner").addEventListener("click", async () => {
+    hideNewPostsBanner();
+    await refreshFeed();
+    if (lenis) lenis.scrollTo(0, { immediate: false });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
+  });
 }
 
 function getOwnerBadgeHtml() {
@@ -195,6 +205,25 @@ async function renderPostsList() {
 
  let realtimeChannel = null;
 
+let pendingNewPostsCount = 0;
+
+function showNewPostsBanner(count) {
+  pendingNewPostsCount += count;
+  const banner = $("newPostsBanner");
+  const text = $("newPostsBannerText");
+  if (!banner || !text) return;
+  text.textContent = pendingNewPostsCount === 1
+    ? "Show 1 new post"
+    : `Show ${pendingNewPostsCount} new posts`;
+  banner.hidden = false;
+}
+
+function hideNewPostsBanner() {
+  pendingNewPostsCount = 0;
+  const banner = $("newPostsBanner");
+  if (banner) banner.hidden = true;
+}
+
 function initRealtime() {
   // Если канал уже был создан, отписываемся от старого (чтобы не дублировать)
   if (realtimeChannel) {
@@ -207,15 +236,10 @@ function initRealtime() {
       const postsList = $("postsList");
       
       if (payload.eventType === 'INSERT') {
-        // Если пост добавил кто-то другой
-        if (payload.new.user_id !== auth.currentUser?.id) {
-          // toast("Опубликован новый пост!", "info");
-          // Чтобы отрисовать один пост, нам нужны данные автора и лайков.
-          // Проще всего вызвать renderPostsList(), но чтобы не сбить скролл, 
-          // мы проверим, не пишет ли юзер сейчас.
-          if (!isUserTyping()) renderPostsList();
-        }
-      } 
+  if (payload.new.user_id !== auth.currentUser?.id) {
+    showNewPostsBanner(1);
+  }
+}
       else if (payload.eventType === 'DELETE') {
         // Мгновенно удаляем пост из DOM без перезагрузки
         const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
