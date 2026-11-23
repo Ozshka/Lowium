@@ -70,13 +70,19 @@ if ($("refreshBtn")) {
   $("refreshBtn").addEventListener("click", refreshFeed);
 }
 
-if ($("newPostsBanner")) {
+iif ($("newPostsBanner")) {
   $("newPostsBanner").addEventListener("click", async () => {
     hideNewPostsBanner();
     await refreshFeed();
-    if (lenis) lenis.scrollTo(0, { immediate: false });
-    else window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Автоскролл на самый верх
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: false }); // Плавный скролл через Lenis
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" }); // Фолбэк для браузеров без Lenis
+    }
   });
+}
 }
 
 function getOwnerBadgeHtml() {
