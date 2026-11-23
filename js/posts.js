@@ -45,6 +45,8 @@ export async function fetchPosts() {
     });
   }
 
+   likesCache.clear();
+
   return (posts || []).map(post => {
     const k = String(post.id);
     likesCache.set(k, { count: likeCounts[k] || 0, liked: userLikes.has(k) });
