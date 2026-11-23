@@ -272,10 +272,12 @@ function initRealtime() {
     })
     
       // 2. СЛУШАЕМ КОММЕНТАРИИ
+    
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
+      console.log("🔥 Realtime Comment Event:", payload); // <--- ДОБАВИТЬ ЭТО
+      
       let postId = payload.new?.post_id || payload.old?.post_id;
 
-      // Если это DELETE и post_id нет в payload.old, ищем его в DOM по ID комментария
       if (payload.eventType === 'DELETE' && !postId) {
         const commentEl = document.querySelector(`[data-comment-id="${payload.old.id}"]`);
         if (commentEl) {
@@ -283,7 +285,10 @@ function initRealtime() {
         }
       }
 
+      console.log("🔥 Resolved Post ID:", postId); // <--- ДОБАВИТЬ ЭТО
+
       if (!postId) return;
+      
 
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
