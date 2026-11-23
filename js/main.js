@@ -254,10 +254,10 @@ function initRealtime() {
       const postsList = $("postsList");
       
       if (payload.eventType === 'INSERT') {
-  if (payload.new.user_id !== auth.currentUser?.id) {
-    showNewPostsBanner(1);
-  }
-}
+        if (payload.new.user_id !== auth.currentUser?.id) {
+          showNewPostsBanner(1);
+        }
+      }
       else if (payload.eventType === 'DELETE') {
         // Мгновенно удаляем пост из DOM без перезагрузки
         const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
@@ -336,20 +336,26 @@ function initRealtime() {
         }
       }
     })
-        .subscribe()
-}
 
-// Вспомогательная функция: проверяем, пишет ли юзер что-то прямо сейчас
-function isUserTyping() {
-  const active = document.activeElement;
-  if (!active) return false;
-  // Если фокус в текстовом поле, селекте или textarea
-  if (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT") {
-    return active.value.trim().length > 0; // Пишет только если поле не пустое
-  }
-  return false;
-}
+    // 4. СЛУШАЕМ ЗАЯВКИ НА ВЕРИФИКАЦИЮ
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
+      // Реагируем только если текущий юзер — админ
+      if (!auth.isAdmin) return;
 
+      // Если пришла новая заявка — показываем тост
+      if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+        toast("Новая заявка на верификацию!", "info");
+      }
+
+      // Обновляем блок заявок в ленте (чтобы добавились новые или исчезли одобренные)
+      renderPendingVerifications();
+    })
+    
+    .subscribe((status, err) => {
+      console.log("🔥 Realtime Status:", status);
+      if (err) console.error("🔥 Realtime Error:", err);
+    });
+}
 
 
 function renderCommentsInto(body, comments, postId) {
