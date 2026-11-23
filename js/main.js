@@ -271,16 +271,14 @@ function initRealtime() {
       }
     })
     
-      // 2. СЛУШАЕМ КОММЕНТАРИИ
+     // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
-      // Теперь post_id будет и в new, и в old (благодаря REPLICA IDENTITY FULL)
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
 
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
-      // Обновляем счетчик комментов в шапке поста
       const countEl = postEl.querySelector("[data-comment-count]");
       if (countEl) {
         let current = parseInt(countEl.textContent, 10) || 0;
@@ -289,7 +287,6 @@ function initRealtime() {
         countEl.textContent = String(current);
       }
 
-      // Если секция комментов открыта — обновляем её (вместо ручного удаления из DOM)
       const bodyEl = postEl.querySelector("[data-comments-body]");
       if (bodyEl && bodyEl.classList.contains("open")) {
         posts.clearCommentsCache(postId);
@@ -303,7 +300,6 @@ function initRealtime() {
         });
       }
     })
-    
     // 3. СЛУШАЕМ ЛАЙКИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
