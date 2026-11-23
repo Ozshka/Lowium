@@ -273,14 +273,13 @@ function initRealtime() {
     
        // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
-      console.log("🔥 Пришло событие комментария:", payload); // <--- ДОБАВИТЬ СЮДА
-      
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
 
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
+      // 1. Обновляем счетчик
       const countEl = postEl.querySelector("[data-comment-count]");
       if (countEl) {
         let current = parseInt(countEl.textContent, 10) || 0;
@@ -289,17 +288,26 @@ function initRealtime() {
         countEl.textContent = String(current);
       }
 
+      // 2. Обновляем список комментов
       const bodyEl = postEl.querySelector("[data-comments-body]");
       if (bodyEl && bodyEl.classList.contains("open")) {
-        posts.clearCommentsCache(postId);
-        bodyEl.dataset.loaded = "";
-        posts.loadComments(postId, bodyEl).then(fresh => {
-          const input = bodyEl.querySelector('[data-role="comment-input"]');
-          const isTypingComment = input && input.value.trim().length > 0;
-          if (!isTypingComment) {
-            renderCommentsInto(bodyEl, fresh, postId);
+        if (payload.eventType === 'DELETE') {
+          // Если удаление — просто находим элемент по ID и удаляем из DOM
+          const commentEl = bodyEl.querySelector(`.comment[data-comment-id="${payload.old.id}"]`);
+          if (commentEl) {
+            commentEl.remove(); // Мгновенно исчезает
           }
-        });
+        } else {
+          // Если добавление (или что-то еще) — перезапрашиваем
+          posts.clearCommentsCache(postId);
+          bodyEl.dataset.loaded = "";
+          posts.loadComments(postId, bodyEl).then(fresh => {
+            const input = bodyEl.querySelector('[data-role="comment-input"]');
+            if (!input || input.value.trim().length === 0) {
+              renderCommentsInto(bodyEl, fresh, postId);
+            }
+          });
+        }
       }
     })
     
