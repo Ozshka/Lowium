@@ -40,6 +40,35 @@ $("themeToggle").addEventListener("click", async () => {
   } catch (e) {}
 });
 
+let isRefreshing = false;
+
+async function refreshFeed() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+
+  const btn = $("refreshBtn");
+  const icon = $("refreshIcon");
+  if (btn) btn.disabled = true;
+  if (icon) icon.style.animation = "spin 0.8s linear infinite";
+
+  try {
+    posts.clearPostsCache();
+    await renderPostsList();
+    toast("Feed updated", "success");
+  } catch (err) {
+    console.error("Refresh error:", err);
+    toast("Could not refresh feed", "error");
+  } finally {
+    isRefreshing = false;
+    if (btn) btn.disabled = false;
+    if (icon) icon.style.animation = "";
+  }
+}
+
+if ($("refreshBtn")) {
+  $("refreshBtn").addEventListener("click", refreshFeed);
+}
+
 function getOwnerBadgeHtml() {
   return `<span class="owner-badge" title="Owner"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>`;
 }
@@ -265,7 +294,10 @@ function initRealtime() {
         }
       }
     })
-    .subscribe();
+        .subscribe((status, err) => {
+      console.log("🔥 Realtime Status:", status);
+      if (err) console.error("🔥 Realtime Error:", err);
+    });
 }
 
 // Вспомогательная функция: проверяем, пишет ли юзер что-то прямо сейчас
