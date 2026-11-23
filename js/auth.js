@@ -1,5 +1,5 @@
 import { supabase } from './config.js';
-import { escapeHtml, sanitizeUrl, toast } from './utils.js';
+import { escapeHtml, sanitizeUrl, toast, stripImageMetadata } from './utils.js';
 
 export let currentUser = null;
 export let currentProfile = null;
@@ -82,11 +82,16 @@ export async function updateProfile(data, avatarFile) {
   let avatarUrl = currentProfile?.avatar_url;
 
   if (avatarFile) {
-    const fileExt = avatarFile.name.split('.').pop();
+    // Чистим метаданные + перекодируем
+    const cleanBlob = await stripImageMetadata(avatarFile, { maxSize: 512, quality: 0.9 });
+    const fileExt = cleanBlob.type === "image/png" ? "png" : "jpg";
     const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, avatarFile);
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, cleanBlob, { contentType: cleanBlob.type, upsert: false });
     if (uploadError) throw new Error("Upload error: " + uploadError.message);
-    
+
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
     avatarUrl = publicUrl;
   }
