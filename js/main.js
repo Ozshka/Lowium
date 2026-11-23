@@ -1271,4 +1271,29 @@ document.addEventListener("dragstart", (e) => {
 }, { capture: true });
 
 
+function setupSpinHover(element, innerSelector = null) {
+  if (!element) return;
+  
+  // Нам нужен элемент, который будет крутиться (либо сам element, либо его внутренний SVG)
+  const target = innerSelector ? element.querySelector(innerSelector) : element;
+  if (!target) return;
+
+  element.addEventListener("mouseenter", () => {
+    // Если анимация уже идет, не перезапускаем её, чтобы не было рывков
+    if (target.classList.contains("animate-spin")) return;
+    
+    target.classList.add("animate-spin");
+    
+    // Убираем класс ровно через 0.8 секунды (время анимации)
+    setTimeout(() => {
+      target.classList.remove("animate-spin");
+    }, 800);
+  });
+}
+
+// Привязываем к нужным элементам
+setupSpinHover(document.getElementById("themeToggle"), "svg");
+setupSpinHover(document.getElementById("settingsBtn"), "svg");
+setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small"); // Крутим только аватарку внутри профиля
+
 startApp();
