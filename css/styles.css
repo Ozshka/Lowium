@@ -164,6 +164,7 @@ header h1 .version-tag {
 .theme-toggle:hover { color: var(--text-main); background: var(--btn-glass-bg); transform: scale(1.1); }
 .theme-toggle:active { transform: scale(0.9); }
 
+/* Общие кнопки */
 button {
   cursor: pointer; font-family: 'Inter', sans-serif; border: none;
   border-radius: 8px; padding: 10px 20px; font-weight: 500;
