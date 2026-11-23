@@ -124,13 +124,6 @@
         <span id="headerUsername" class="user-name-small">User</span>
       </div>
 
-      <button class="theme-toggle" id="refreshBtn" title="Refresh feed" type="button">
-  <svg id="refreshIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="23 4 23 10 17 10"></polyline>
-    <polyline points="1 20 1 14 7 14"></polyline>
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-  </svg>
-</button>
 
       <button class="theme-toggle" id="settingsBtn" title="Settings" type="button">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -166,6 +159,14 @@
       <button class="btn-glass" id="cancelEditBtn" type="button">Cancel</button>
     </div>
   </div>
+
+  <button class="new-posts-banner" id="newPostsBanner" type="button" hidden>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="19" x2="12" y2="5"></line>
+    <polyline points="5 12 12 5 19 12"></polyline>
+  </svg>
+  <span id="newPostsBannerText">Show new posts</span>
+</button>
 
   <div class="posts" id="postsList">
     <div class="card empty-state"><p>Loading...</p></div>
@@ -316,3 +317,4 @@
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
+
