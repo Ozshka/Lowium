@@ -70,6 +70,7 @@ export async function toggleLike(postId, btnEl) {
   const wasLiked = state.liked;
   const prevCount = state.count;
   
+  // Оптимистичное обновление UI
   state.liked = !wasLiked;
   state.count = wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1;
   likesCache.set(postId, state);
@@ -98,13 +99,17 @@ export async function toggleLike(postId, btnEl) {
     const res = await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", auth.currentUser.id);
     error = res.error;
   } else {
-    const res = await supabase.from("likes").insert({ post_id: postId, user_id: auth.currentUser.id });
+    // Используем upsert, чтобы избежать ошибки дубликата при гонке
+    const res = await supabase.from("likes").upsert({ post_id: postId, user_id: auth.currentUser.id }, { onConflict: 'post_id,user_id' });
     error = res.error;
   }
   likesInFlight.delete(postId);
 
   if (error) {
-    state.liked = wasLiked; state.count = prevCount; likesCache.set(postId, state);
+    // Откат при ошибке
+    state.liked = wasLiked; 
+    state.count = prevCount; 
+    likesCache.set(postId, state);
     if (btnEl) {
       btnEl.classList.toggle("liked", state.liked);
       btnEl.querySelector(".like-icon").textContent = state.liked ? "♥" : "♡";
