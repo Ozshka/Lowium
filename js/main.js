@@ -1182,7 +1182,7 @@ else if (action === "toggle-comments") {
  // if (countEl) {
    // const current = parseInt(countEl.textContent, 10) || 0;
   //  countEl.textContent = String(Math.max(0, current - 1));
-  }
+ // }
 }
   else if (action === "submit-comment") {
   if (!auth.currentProfile?.is_verified) {
