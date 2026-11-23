@@ -1,7 +1,7 @@
 import { supabase, DEFAULT_AVATAR } from './config.js';
 import * as auth from './auth.js';
 import * as posts from './posts.js';
-import { initAutoGrow, autoGrow, autoGrowObserver, escapeHtml, sanitizeUrl, formatDate, formatShortDate, toast, confirmDialog, stripImageMetadata } from './utils.js';
+import { initAutoGrow, autoGrow, autoGrowObserver, escapeHtml, sanitizeUrl, formatDate, formatShortDate, toast, confirmDialog, stripImageMetadata, triggerSpin } from './utils.js';
 
 const $ = id => document.getElementById(id);
 
@@ -24,6 +24,7 @@ function updateThemeIcon(theme) {
 updateThemeIcon(savedTheme);
 
 $("themeToggle").addEventListener("click", async () => {
+  triggerSpin($("iconMoon").style.display !== 'none' ? $("iconMoon") : $("iconSun"));
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   const applyTheme = () => {
@@ -116,6 +117,7 @@ function openProfileModal(name, tag, avatar, bio, isOwner, region) {
 }
 
 $("userProfile").addEventListener("click", () => {
+  triggerSpin($("headerAvatar"));
   if (!auth.currentProfile) return;
   openProfileModal(
     auth.currentProfile.display_name || auth.currentProfile.tag,
@@ -219,6 +221,7 @@ async function renderPostsList() {
     postsList.innerHTML = `<div class="card empty-state"><p>Could not load posts.</p></div>`;
   }
 }
+
 
 
  let realtimeChannel = null;
@@ -686,6 +689,7 @@ $("signupForm").addEventListener("submit", async (e) => {
 $("logoutBtn").addEventListener("click", auth.handleLogout);
 
 $("settingsBtn").addEventListener("click", () => {
+  triggerSpin($("settingsBtn").querySelector("svg"));
   $("settingsModal").classList.add("open");
   $("newEmail").value = "";
   $("newPass").value = "";
@@ -717,6 +721,11 @@ $("updateEmailBtn").addEventListener("click", async () => {
     $("newEmail").value = "";
   }
 });
+
+
+
+
+  
 
 $("updatePassBtn").addEventListener("click", async () => {
   const newPass = $("newPass").value;
