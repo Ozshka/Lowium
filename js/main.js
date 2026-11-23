@@ -272,23 +272,10 @@ function initRealtime() {
     })
     
       // 2. СЛУШАЕМ КОММЕНТАРИИ
-    
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
-      console.log("🔥 Realtime Comment Event:", payload); // <--- ДОБАВИТЬ ЭТО
-      
-      let postId = payload.new?.post_id || payload.old?.post_id;
-
-      if (payload.eventType === 'DELETE' && !postId) {
-        const commentEl = document.querySelector(`[data-comment-id="${payload.old.id}"]`);
-        if (commentEl) {
-          postId = commentEl.dataset.postId;
-        }
-      }
-
-      console.log("🔥 Resolved Post ID:", postId); // <--- ДОБАВИТЬ ЭТО
-
+      // Теперь post_id будет и в new, и в old (благодаря REPLICA IDENTITY FULL)
+      const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
-      
 
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
@@ -302,7 +289,7 @@ function initRealtime() {
         countEl.textContent = String(current);
       }
 
-      // Если секция комментов открыта — обновляем её
+      // Если секция комментов открыта — обновляем её (вместо ручного удаления из DOM)
       const bodyEl = postEl.querySelector("[data-comments-body]");
       if (bodyEl && bodyEl.classList.contains("open")) {
         posts.clearCommentsCache(postId);
