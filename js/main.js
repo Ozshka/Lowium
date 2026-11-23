@@ -327,12 +327,18 @@ function initRealtime() {
           btn.classList.add("liked");
           likeIcon.textContent = "♥";
           countEl.textContent = String(parseInt(countEl.textContent || 0, 10) + 1);
+
+            cached.count++;
+          posts.likesCache.set(k, cached);
         }
       } else if (payload.eventType === 'DELETE') {
         if (payload.old.user_id !== auth.currentUser?.id) {
           btn.classList.remove("liked");
           likeIcon.textContent = "♡";
           countEl.textContent = String(Math.max(0, parseInt(countEl.textContent || 0, 10) - 1));
+
+           cached.count = Math.max(0, cached.count - 1);
+          posts.likesCache.set(k, cached);
         }
       }
     })
