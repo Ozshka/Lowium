@@ -70,7 +70,7 @@ if ($("refreshBtn")) {
   $("refreshBtn").addEventListener("click", refreshFeed);
 }
 
-iif ($("newPostsBanner")) {
+if ($("newPostsBanner")) {
   $("newPostsBanner").addEventListener("click", async () => {
     hideNewPostsBanner();
     await refreshFeed();
