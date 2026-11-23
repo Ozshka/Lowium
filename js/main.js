@@ -271,60 +271,57 @@ function initRealtime() {
       }
     })
     
-     // 2. СЛУШАЕМ КОММЕНТАРИИ
+         // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
-      console.log("🔥 Realtime Comment Event:", payload.eventType, payload);
-      
-      const postId = payload.new?.post_id || payload.old?.post_id;
+      let postId = payload.new?.post_id || payload.old?.post_id;
+
+      if (payload.eventType === 'DELETE' && !postId) {
+        // Ищем кнопку удаления по ID комментария
+        const btnEl = document.querySelector(`[data-action="delete-comment"][data-comment-id="${payload.old.id}"]`);
+        
+        if (btnEl) {
+          postId = btnEl.dataset.postId;
+          console.log("✅ Нашли postId через кнопку:", postId);
+        } else {
+          console.warn("❌ Кнопка удаления не найдена в DOM. ID комментария:", payload.old.id);
+          // Посмотрим, какие вообще кнопки есть
+          const allBtns = document.querySelectorAll(`[data-action="delete-comment"]`);
+          console.log("Всего кнопок удаления в DOM:", allBtns.length);
+          allBtns.forEach(b => console.log("Кнопка:", b.dataset.commentId, b.dataset.postId));
+        }
+      }
+
       if (!postId) {
-        console.warn("❌ Нет postId в payload");
+        console.warn("❌ Так и не нашли postId", payload);
         return;
       }
 
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
-      if (!postEl) {
-        console.warn("❌ Пост не найден в DOM:", postId);
-        return;
-      }
+      if (!postEl) return;
 
-      // 1. Обновляем счетчик
       const countEl = postEl.querySelector("[data-comment-count]");
       if (countEl) {
         let current = parseInt(countEl.textContent, 10) || 0;
         if (payload.eventType === 'INSERT') current++;
         if (payload.eventType === 'DELETE') current = Math.max(0, current - 1);
         countEl.textContent = String(current);
-        console.log("✅ Счетчик обновлен:", current);
       }
 
-      // 2. Обновляем список комментов
       const bodyEl = postEl.querySelector("[data-comments-body]");
-      if (!bodyEl || !bodyEl.classList.contains("open")) {
-        console.warn("❌ Секция комментов закрыта, пропускаем обновление DOM");
-        return;
-      }
-
-      if (payload.eventType === 'DELETE') {
-        console.log("🗑 Ищем элемент для удаления:", `[data-comment-id="${payload.old.id}"]`);
-        const commentEl = bodyEl.querySelector(`.comment[data-comment-id="${payload.old.id}"]`);
-        if (commentEl) {
-          commentEl.remove();
-          console.log("✅ Удален из DOM");
+      if (bodyEl && bodyEl.classList.contains("open")) {
+        if (payload.eventType === 'DELETE') {
+          const commentEl = bodyEl.querySelector(`.comment[data-comment-id="${payload.old.id}"]`);
+          if (commentEl) commentEl.remove();
         } else {
-          console.warn("❌ Элемент не найден в DOM! Проверь data-comment-id в renderCommentsInto.");
+          posts.clearCommentsCache(postId);
+          bodyEl.dataset.loaded = "";
+          posts.loadComments(postId, bodyEl).then(fresh => {
+            const input = bodyEl.querySelector('[data-role="comment-input"]');
+            if (!input || input.value.trim().length === 0) {
+              renderCommentsInto(bodyEl, fresh, postId);
+            }
+          });
         }
-      } else {
-        posts.clearCommentsCache(postId);
-        bodyEl.dataset.loaded = "";
-        posts.loadComments(postId, bodyEl).then(fresh => {
-          const input = bodyEl.querySelector('[data-role="comment-input"]');
-          if (!input || input.value.trim().length === 0) {
-            renderCommentsInto(bodyEl, fresh, postId);
-            console.log("✅ Перерисован список комментов");
-          } else {
-            console.warn("❌ Перерисовка отменена: юзер печатает");
-          }
-        });
       }
     })
     
