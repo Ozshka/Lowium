@@ -93,7 +93,7 @@ body.auth-mode { overflow: hidden; }
 .container { max-width: 800px; margin: 0 auto; padding: 24px 24px 48px; padding-bottom: 30px !important; flex: 1; width: 100%; }
 .container.hidden { display: none !important; }
 
-/* --- НОВЫЕ АНИМАЦИИ --- */
+/* --- АНИМАЦИИ --- */
 @keyframes fadeInUp { 
   from { opacity: 0; transform: translateY(12px); } 
   to { opacity: 1; transform: translateY(0); } 
@@ -111,48 +111,24 @@ body.auth-mode { overflow: hidden; }
   to { opacity: 0; transform: translateX(20px); } 
 }
 @keyframes spin { 100% { transform: rotate(360deg); } }
-
 @keyframes floatIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 1. Иконки темы (луна/солнце) */
-#themeToggle svg {
-  transition: transform 0.3s ease; /* Плавный возврат в исходное состояние */
-}
-#themeToggle:hover svg {
-  animation: spinSlowDown 0.8s cubic-bezier(0.15, 0.85, 0.3, 1) both;
-}
-
-/* 2. Иконка настроек (шестеренка) */
-#settingsBtn svg {
-  transition: transform 0.3s ease;
-}
-#settingsBtn:hover svg {
-  animation: spinSlowDown 0.8s cubic-bezier(0.15, 0.85, 0.3, 1) both;
-}
-
-/* 3. Аватарка в профиле */
-.user-avatar-small {
-  transition: transform 0.3s ease;
-}
-.user-profile:hover .user-avatar-small {
-  animation: spinSlowDown 0.8s cubic-bezier(0.15, 0.85, 0.3, 1) both;
-}
-
-/* Сама анимация (один оборот на 360 градусов) */
+/* Анимация кручения (вызывается через JS) */
 @keyframes spinSlowDown {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-
+.animate-spin {
+  animation: spinSlowDown 0.8s cubic-bezier(0.15, 0.85, 0.3, 1) both;
+}
 
 /* --- КАРТОЧКИ --- */
 .card {
@@ -198,9 +174,8 @@ header h1 .version-tag {
 .user-avatar-small {
   width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
   border: 1px solid var(--border); background: var(--input-bg);
-  transition: transform 0.3s var(--ease-smooth);
+  /* Тут больше нет ховер-анимации, всё делает JS */
 }
-.user-profile:hover .user-avatar-small { transform: scale(1.05); }
 
 .user-name-small {
   font-size: 0.9rem; font-weight: 500; color: var(--text-main);
