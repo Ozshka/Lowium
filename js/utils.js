@@ -158,3 +158,11 @@ export function confirmDialog(message, opts = {}) {
     confirmOk.addEventListener("click", onOk);
   });
 }
+
+export function triggerSpin(element) {
+  if (!element) return;
+  element.classList.remove("animate-spin");
+  void element.offsetWidth; 
+  element.classList.add("animate-spin");
+  setTimeout(() => element.classList.remove("animate-spin"), 1000);
+}
