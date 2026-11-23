@@ -271,34 +271,24 @@ function initRealtime() {
       }
     })
     
-         // 2. СЛУШАЕМ КОММЕНТАРИИ
+          // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
       let postId = payload.new?.post_id || payload.old?.post_id;
 
+      // Запасной план для DELETE: ищем postId через кнопку удаления
       if (payload.eventType === 'DELETE' && !postId) {
-        // Ищем кнопку удаления по ID комментария
         const btnEl = document.querySelector(`[data-action="delete-comment"][data-comment-id="${payload.old.id}"]`);
-        
         if (btnEl) {
           postId = btnEl.dataset.postId;
-          console.log("✅ Нашли postId через кнопку:", postId);
-        } else {
-          console.warn("❌ Кнопка удаления не найдена в DOM. ID комментария:", payload.old.id);
-          // Посмотрим, какие вообще кнопки есть
-          const allBtns = document.querySelectorAll(`[data-action="delete-comment"]`);
-          console.log("Всего кнопок удаления в DOM:", allBtns.length);
-          allBtns.forEach(b => console.log("Кнопка:", b.dataset.commentId, b.dataset.postId));
         }
       }
 
-      if (!postId) {
-        console.warn("❌ Так и не нашли postId", payload);
-        return;
-      }
+      if (!postId) return;
 
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
+      // Обновляем счетчик
       const countEl = postEl.querySelector("[data-comment-count]");
       if (countEl) {
         let current = parseInt(countEl.textContent, 10) || 0;
@@ -307,12 +297,15 @@ function initRealtime() {
         countEl.textContent = String(current);
       }
 
+      // Обновляем список комментов
       const bodyEl = postEl.querySelector("[data-comments-body]");
       if (bodyEl && bodyEl.classList.contains("open")) {
         if (payload.eventType === 'DELETE') {
+          // Удаляем коммент из DOM
           const commentEl = bodyEl.querySelector(`.comment[data-comment-id="${payload.old.id}"]`);
           if (commentEl) commentEl.remove();
         } else {
+          // Перезапрашиваем при добавлении
           posts.clearCommentsCache(postId);
           bodyEl.dataset.loaded = "";
           posts.loadComments(postId, bodyEl).then(fresh => {
