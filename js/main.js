@@ -1139,77 +1139,43 @@ else if (action === "toggle-comments") {
     }
   }
 }
-    else if (action === "delete-comment") {
-  const commentId = target.dataset.commentId;
-  const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
-  if (!ok) return;
+     else if (action === "delete-comment") {
+      const commentId = target.dataset.commentId;
+      const ok = await confirmDialog("Delete this comment?", { title: "Delete Comment", okText: "Delete" });
+      if (!ok) return;
 
-  try {
-    await posts.deleteComment(commentId, postId);
-  } catch (err) {
-    toast("Error deleting comment: " + err.message, "error");
-    return;
-  }
-
-  toast("Comment deleted.", "success");
-
-  const sec = target.closest(".comments-section");
-  const body = sec.querySelector("[data-comments-body]");
-
-  // сброс кэша и флага, затем перезагрузка списка с сервера
-  posts.clearCommentsCache(postId);
-  body.dataset.loaded = "";
-
-  try {
-    const fresh = await posts.loadComments(postId, body);
-    renderCommentsInto(body, fresh, postId);
-  } catch (err) {
-    console.error(err);
-    body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
-    body.dataset.loaded = "true";
-  }
-
-  // no need, now its in realtime
-  // const countEl = sec.querySelector("[data-comment-count]");
- // if (countEl) {
-   // const current = parseInt(countEl.textContent, 10) || 0;
-  //  countEl.textContent = String(Math.max(0, current - 1));
- // }
-}
-  else if (action === "submit-comment") {
-  if (!auth.currentProfile?.is_verified) {
-    $("verificationError").style.display = "none";
-    $("verificationModal").classList.add("open");
-    return;
-  }
-  const sec = target.closest(".comments-section");
-  const textarea = sec.querySelector('[data-role="comment-input"]');
-  const content = textarea.value.trim();
-  if (!content) return;
-
-  try {
-    await posts.submitComment(postId, content);
-    textarea.value = "";
-    posts.clearCommentsCache(postId);
-
-    const body = sec.querySelector("[data-comments-body]");
-    body.dataset.loaded = "";
-
-    const freshComments = await posts.loadComments(postId, body);
-    renderCommentsInto(body, freshComments, postId);
-
+      try {
+        await posts.deleteComment(commentId, postId);
+        toast("Comment deleted.", "success");
+        // Всё остальное (счетчик, перерисовку) сделает Realtime!
+      } catch (err) {
+        toast("Error deleting comment: " + err.message, "error");
+      }
     }
+    else if (action === "submit-comment") {
+      if (!auth.currentProfile?.is_verified) {
+        $("verificationError").style.display = "none";
+        $("verificationModal").classList.add("open");
+        return;
+      }
+      const sec = target.closest(".comments-section");
+      const textarea = sec.querySelector('[data-role="comment-input"]');
+      const content = textarea.value.trim();
+      if (!content) return;
 
-  } catch (err) {
-    if (err.message === "VERIFICATION_REQUIRED") {
-      $("verificationError").style.display = "none";
-      $("verificationModal").classList.add("open");
-    } else {
-      toast("Error: " + err.message, "error");
+      try {
+        await posts.submitComment(postId, content);
+        textarea.value = ""; // Очистили поле, и всё.
+        // Realtime сам увеличит счетчик и добавит коммент в открытую секцию.
+      } catch (err) {
+        if (err.message === "VERIFICATION_REQUIRED") {
+          $("verificationError").style.display = "none";
+          $("verificationModal").classList.add("open");
+        } else {
+          toast("Error: " + err.message, "error");
+        }
+      }
     }
-  }
-}
-});
 
  $("closeViewProfileBtn").addEventListener("click", () => $("viewProfileModal").classList.remove("open"));
 
