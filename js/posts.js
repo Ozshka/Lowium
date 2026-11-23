@@ -125,12 +125,11 @@ export async function loadComments(postId, bodyEl) {
   postId = String(postId);
   bodyEl.innerHTML = `<div class="comments-loading"><div class="spinner"></div> Loading...</div>`;
 
-   const { data: comments, error } = await supabase
+ const { data: comments, error } = await supabase
     .from("comments")
     .select("*")
     .eq("post_id", postId)
-    .order("created_at", { ascending: true })
-    .abortSignal(new AbortController().signal);
+    .order("created_at", { ascending: true });
 
   if (error) { bodyEl.innerHTML = `<div class="comments-empty">Could not load comments.</div>`; return; }
   
