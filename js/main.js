@@ -271,8 +271,10 @@ function initRealtime() {
       }
     })
     
-     // 2. СЛУШАЕМ КОММЕНТАРИИ
+       // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
+      console.log("🔥 Пришло событие комментария:", payload); // <--- ДОБАВИТЬ СЮДА
+      
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
 
