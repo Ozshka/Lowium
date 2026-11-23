@@ -279,6 +279,8 @@ function isUserTyping() {
   return false;
 }
 
+
+
 function renderCommentsInto(body, comments, postId) {
   if (!comments) {
     body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
@@ -1183,5 +1185,22 @@ document.addEventListener("keydown", (e) => {
 });
 // ===== /Image Viewer =====
 
+
+
 autoGrowObserver.observe(document.body, { childList: true, subtree: true });
+
+
+// ===== Anti right-click on images =====
+document.addEventListener("contextmenu", (e) => {
+  if (e.target.matches("img, .post-gallery img, .post-author-avatar, .comment-avatar, .user-avatar-small, .profile-avatar-preview, #imageViewerImg")) {
+    e.preventDefault();
+  }
+}, { capture: true });
+
+// Дополнительно: блокируем drag-and-drop картинок (перетаскивание в новую вкладку)
+document.addEventListener("dragstart", (e) => {
+  if (e.target.matches("img")) e.preventDefault();
+}, { capture: true });
+
+
 startApp();
