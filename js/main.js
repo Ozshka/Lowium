@@ -1,7 +1,7 @@
 import { supabase, DEFAULT_AVATAR } from './config.js';
 import * as auth from './auth.js';
 import * as posts from './posts.js';
-import { initAutoGrow, autoGrow, autoGrowObserver, escapeHtml, sanitizeUrl, formatDate, formatShortDate, toast, confirmDialog } from './utils.js';
+import { initAutoGrow, autoGrow, autoGrowObserver, escapeHtml, sanitizeUrl, formatDate, formatShortDate, toast, confirmDialog, stripImageMetadata } from './utils.js';
 
 const $ = id => document.getElementById(id);
 
@@ -685,27 +685,31 @@ $("publishBtn").addEventListener("click", async () => {
   $("publishBtn").textContent = editingPostId ? "Saving..." : "Publishing...";
 
   try {
-    const imageUrls = [];
+        const imageUrls = [];
 
     for (const dataUrl of pastedImages) {
       if (dataUrl.startsWith("http")) {
-        imageUrls.push(dataUrl);
+        imageUrls.push(dataUrl); // уже загруженная — не трогаем
       } else {
         const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const fileExt = blob.type.split('/')[1] || 'png';
+        const rawBlob = await res.blob();
+
+        // Чистим EXIF + ограничиваем размер
+        const cleanBlob = await stripImageMetadata(rawBlob, { maxSize: 2048, quality: 0.9 });
+
+        const fileExt = cleanBlob.type === "image/png" ? "png"
+                      : cleanBlob.type === "image/webp" ? "webp"
+                      : cleanBlob.type === "image/gif" ? "gif"
+                      : "jpg";
         const fileName = `${auth.currentUser.id}_${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-        
+
         const { error: uploadError } = await supabase.storage
           .from('posts')
-          .upload(fileName, blob, { contentType: blob.type });
+          .upload(fileName, cleanBlob, { contentType: cleanBlob.type });
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('posts')
-          .getPublicUrl(fileName);
-        
+        const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(fileName);
         imageUrls.push(publicUrl);
       }
     }
