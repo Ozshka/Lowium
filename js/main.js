@@ -294,10 +294,7 @@ function initRealtime() {
         }
       }
     })
-        .subscribe((status, err) => {
-      console.log("🔥 Realtime Status:", status);
-      if (err) console.error("🔥 Realtime Error:", err);
-    });
+        .subscribe()
 }
 
 // Вспомогательная функция: проверяем, пишет ли юзер что-то прямо сейчас
