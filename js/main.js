@@ -381,7 +381,7 @@ function renderCommentsInto(body, comments, postId) {
         const region = c.author.region || "";
 
         return `
-          <div class="comment">
+     <div class="comment" data-comment-id="${escapeHtml(c.id)}">
             <img src="${escapeHtml(av)}" class="comment-avatar" alt="">
             <div class="comment-body-text">
               <div class="comment-head">
