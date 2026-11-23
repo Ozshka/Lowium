@@ -361,9 +361,7 @@ function initRealtime() {
       renderPendingVerifications();
     })
     
-    .subscribe((status, err) => {
-      console.log("🔥 Realtime Status:", status);
-      if (err) console.error("🔥 Realtime Error:", err);
+    .subscribe();
     });
 }
 
