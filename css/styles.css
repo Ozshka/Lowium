@@ -63,7 +63,7 @@ body {
 }
 
 #mainSite {
-  flex: 1; /* Это заставит контент занимать всё свободное место */
+  flex: 1;
 }
 
 #mainFooter {
@@ -74,7 +74,7 @@ body {
   background: var(--bg) !important;
   border-top: 1px solid var(--border) !important;
   text-align: center !important;
-  padding: 4px 16px !important; /* Всего 4 пикселя сверху и снизу */
+  padding: 4px 16px !important;
   color: var(--text-muted) !important;
   font-size: 0.75rem !important;
   line-height: 1.2 !important;
@@ -82,7 +82,6 @@ body {
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
 }
-
 
 body.auth-mode { overflow: hidden; }
 
@@ -173,7 +172,7 @@ button {
 }
 
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(194, 89, 63, 0.3); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-2px); box-shadow: none; }
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
 
@@ -485,27 +484,25 @@ textarea { resize: none; min-height: 100px; line-height: 1.6; }
 .comment-form { display: flex; gap: 10px; align-items: flex-end; padding: 14px 16px; background: var(--input-bg); border-radius: 10px; border: 1px solid var(--border); animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .comment-form textarea { flex: 1; min-height: 48px; max-height: 200px; font-size: 0.92rem; padding: 8px 10px; resize: none; border: none; background: transparent; transition: background 0.2s ease; }
 .comment-form textarea:focus { background: var(--card-bg); }
-.comment-form button {
-  padding: 8px 16px;
-  font-size: 0.85rem;
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
+.comment-form button { 
+  padding: 8px 16px; 
+  font-size: 0.85rem; 
+  border-radius: 6px; 
+  background: var(--accent); 
+  color: #fff; 
+  border: none; 
   font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); /* Сохраняем анимацию */
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); 
+}
+.comment-form button:hover:not(:disabled) { 
+  background: var(--accent-hover); 
+  transform: translateY(-1px) scale(1.02); 
+  box-shadow: none; 
+}
+.comment-form button:active:not(:disabled) { 
+  transform: translateY(0) scale(0.98); 
 }
 
-/* Убираем глоу и делаем аккуратный ховер */
-.comment-form button:hover:not(:disabled) {
-  background: var(--accent-hover);
-  transform: translateY(-1px) scale(1.02); /* Оставляем микро-анимацию, но без свечения */
-  box-shadow: none; /* Убиваем тень/глоу */
-}
-
-.comment-form button:active:not(:disabled) {
-  transform: translateY(0) scale(0.98); /* Эффект нажатия */
-}
 .comments-empty {
   text-align: center;
   padding: 20px;
@@ -606,7 +603,7 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 }
 
 .btn-glass:hover {
-  box-shadow: 0 2px 8px var(--shadow-hover);
+  box-shadow: none;
 }
 
 .password-req-badges {
@@ -754,16 +751,16 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   width: 40px !important;
   height: 40px !important;
   margin: 0 !important;
-  overflow: hidden; /* чтобы ничего не вылезало */
+  overflow: hidden;
 }
 
 #settingsBtn svg {
   width: 20px;
   height: 20px;
   display: block;
-  margin: auto; /* центрируем сам блок svg */
+  margin: auto;
   padding: 0;
-  transform: translateX(1px); /* микроподстройка вправо, если всё еще чуть-чуть влево */
+  transform: translateX(1px);
 }
 /* Кнопка Sign Out — чтобы не плясала рядом с иконками */
 #logoutBtn {
@@ -847,12 +844,12 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   background: var(--accent);
   color: #fff;
   border: 1px solid var(--accent);
-  border-radius: 8px; /* Как у кнопок btn-primary */
+  border-radius: 8px;
   font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  box-shadow: none; /* Убрали свечение */
+  box-shadow: none;
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -866,4 +863,3 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 .new-posts-banner[hidden] { 
   display: none !important; 
 }
-
