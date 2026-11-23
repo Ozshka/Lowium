@@ -271,12 +271,20 @@ function initRealtime() {
       }
     })
     
-    // 2. СЛУШАЕМ КОММЕНТАРИИ
+      // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
-      const postId = payload.new?.post_id || payload.old?.post_id;
+      let postId = payload.new?.post_id || payload.old?.post_id;
+
+      // Если это DELETE и post_id нет в payload.old, ищем его в DOM по ID комментария
+      if (payload.eventType === 'DELETE' && !postId) {
+        const commentEl = document.querySelector(`[data-comment-id="${payload.old.id}"]`);
+        if (commentEl) {
+          postId = commentEl.dataset.postId;
+        }
+      }
+
       if (!postId) return;
 
-      // Ищем пост в DOM
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
@@ -295,11 +303,8 @@ function initRealtime() {
         posts.clearCommentsCache(postId);
         bodyEl.dataset.loaded = "";
         posts.loadComments(postId, bodyEl).then(fresh => {
-          // Проверяем, не пишет ли юзер в этот момент коммент
           const input = bodyEl.querySelector('[data-role="comment-input"]');
           const isTypingComment = input && input.value.trim().length > 0;
-          
-          // Если пишет — не перерисовываем, чтобы не стереть текст
           if (!isTypingComment) {
             renderCommentsInto(bodyEl, fresh, postId);
           }
