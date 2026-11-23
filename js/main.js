@@ -1177,11 +1177,11 @@ else if (action === "toggle-comments") {
     body.dataset.loaded = "true";
   }
 
-  // счётчик -1
-  const countEl = sec.querySelector("[data-comment-count]");
-  if (countEl) {
-    const current = parseInt(countEl.textContent, 10) || 0;
-    countEl.textContent = String(Math.max(0, current - 1));
+  // no need, now its in realtime
+  // const countEl = sec.querySelector("[data-comment-count]");
+ // if (countEl) {
+   // const current = parseInt(countEl.textContent, 10) || 0;
+  //  countEl.textContent = String(Math.max(0, current - 1));
   }
 }
   else if (action === "submit-comment") {
