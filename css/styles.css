@@ -651,3 +651,46 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 }
 .new-posts-banner:hover { background: var(--accent-hover); border-color: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(194, 89, 63, 0.3); }
 .new-posts-banner[hidden] { display: none !important; }
+
+.post-reactions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.reaction-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reaction-btn:hover {
+  background: var(--input-bg);
+  border-color: var(--text-muted);
+}
+
+.reaction-btn.active {
+  background: var(--btn-glass-bg);
+  border-color: var(--accent);
+  color: var(--text-main);
+}
+
+.reaction-emoji {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.reaction-count {
+  font-size: 0.8rem;
+  min-width: 1ch;
+  text-align: center;
+}
