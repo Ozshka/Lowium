@@ -13,8 +13,6 @@ let pendingNewPostsCount = 0;
 let onboardingAvatarFile = null;
 let profileAvatarFile = null;
 
-
-
 // ===== THEME LOGIC =====
 const savedTheme = localStorage.getItem('theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
@@ -42,13 +40,13 @@ setupSpinHover(document.getElementById("themeToggle"), "svg");
 setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
+// ===== THEME TOGGLE CLICK =====
 $("themeToggle").addEventListener("click", async () => {
-  // 1. Принудительно убираем класс анимации с обеих иконок, 
-  // чтобы они не "застывали" в процессе смены темы
+  // 1. Принудительно убираем класс анимации с обеих иконок
   $("iconMoon").classList.remove("animate-spin");
   $("iconSun").classList.remove("animate-spin");
 
-  // 2. Дальше твой обычный код смены темы
+  // 2. Меняем тему
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   
@@ -71,6 +69,7 @@ $("themeToggle").addEventListener("click", async () => {
     );
   } catch (e) {}
 });
+
 // ===== REFRESH FEED =====
 async function refreshFeed(scrollToTop = false) {
   if (isRefreshing) return;
@@ -196,19 +195,21 @@ async function renderPostsList() {
       const ownerBadge = post.is_owner ? getOwnerBadgeHtml() : "";
       const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
 
-      // Перед return в renderPostsList:
-const reactions = post.reactions || {};
-const reactionEmojis = ["🔥", "😂", "🤔", "💯"];
+      // РЕАКЦИИ
+      const reactions = post.reactions || {};
+      const userReactions = post.userReactions || new Set();
+      const reactionEmojis = ["🔥", "😂", "🤔", "💯"];
 
-const reactionsHtml = reactionEmojis.map(emoji => {
-  const count = reactions[emoji] || 0;
-  const activeClass = count > 0 ? "active" : ""; // Можно добавить класс, если реакция есть
-  return `<button class="reaction-btn ${activeClass}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
-    <span class="reaction-emoji">${emoji}</span>
-    <span class="reaction-count">${count > 0 ? count : ''}</span>
-  </button>`;
-}).join("");
-
+      const reactionsHtml = reactionEmojis.map(emoji => {
+        const count = reactions[emoji] || 0;
+        const isActive = userReactions.has(`${postId}_${emoji}`); 
+        const activeClass = isActive ? "active" : ""; 
+        
+        return `<button class="reaction-btn ${activeClass}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
+          <span class="reaction-emoji">${emoji}</span>
+          <span class="reaction-count">${count > 0 ? count : ''}</span>
+        </button>`;
+      }).join("");
 
       return `
        <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
@@ -236,13 +237,15 @@ const reactionsHtml = reactionEmojis.map(emoji => {
         <div class="post-content">${escapeHtml(post.content)}</div>
 
         <div class="post-footer">
-        <div class="post-reactions">
-      ${reactionsHtml}
-    </div>
           <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeState.count}</span>
           </button>
+          
+          <div class="post-reactions">
+            ${reactionsHtml}
+          </div>
+
           ${canManage ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
             <button class="btn-glass" data-action="edit-post" data-post-id="${escapeHtml(postId)}">Edit</button>
             <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
@@ -288,7 +291,6 @@ function hideNewPostsBanner() {
 }
 
 // ===== REALTIME =====
-
 function isUserTyping() {
   const active = document.activeElement;
   if (!active) return false;
@@ -304,25 +306,18 @@ function initRealtime() {
   }
 
   realtimeChannel = supabase.channel('realtime:public')
-    // 1. СЛУШАЕМ ПОСТЫ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async (payload) => {
       if (payload.eventType === 'INSERT') {
-        if (payload.new.user_id !== auth.currentUser?.id) {
-          showNewPostsBanner(1);
-        }
+        if (payload.new.user_id !== auth.currentUser?.id) showNewPostsBanner(1);
       }
       else if (payload.eventType === 'DELETE') {
         const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
         if (el) el.remove();
       } 
       else if (payload.eventType === 'UPDATE') {
-        if (payload.new.user_id !== auth.currentUser?.id && !isUserTyping()) {
-          renderPostsList();
-        }
+        if (payload.new.user_id !== auth.currentUser?.id && !isUserTyping()) renderPostsList();
       }
     })
-    
-    // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
       let postId = payload.new?.post_id || payload.old?.post_id;
 
@@ -332,7 +327,6 @@ function initRealtime() {
       }
 
       if (!postId) return;
-
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
@@ -361,8 +355,6 @@ function initRealtime() {
         }
       }
     })
-    
-    // 3. СЛУШАЕМ ЛАЙКИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
@@ -400,18 +392,13 @@ function initRealtime() {
         }
       }
     })
-
-    // 4. СЛУШАЕМ ЗАЯВКИ НА ВЕРИФИКАЦИЮ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
       if (!auth.isAdmin) return;
-
       if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
         toast("Новая заявка на верификацию!", "info");
       }
       renderPendingVerifications();
     })
-
-    // 5. СЛУШАЕМ РЕАКЦИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
@@ -423,7 +410,6 @@ function initRealtime() {
       const btn = postEl.querySelector(`[data-action="toggle-reaction"][data-emoji="${emoji}"]`);
       if (!btn) return;
 
-      // Игнорируем, если это наша реакция (мы уже обновили её оптимистично)
       if ((payload.new && payload.new.user_id === auth.currentUser?.id) || 
           (payload.old && payload.old.user_id === auth.currentUser?.id)) return;
 
@@ -438,8 +424,10 @@ function initRealtime() {
 
       countEl.textContent = current > 0 ? current : '';
     })
-    
-    .subscribe();
+    .subscribe((status, err) => {
+      console.log("🔥 Realtime Status:", status);
+      if (err) console.error("🔥 Realtime Error:", err);
+    });
 }
 
 // ===== RENDER COMMENTS =====
@@ -1093,7 +1081,34 @@ $("postsList").addEventListener("click", async (e) => {
   const action = target.dataset.action;
   const postId = target.dataset.postId;
 
-  if (action === "toggle-like") {
+  if (action === "toggle-reaction") {
+    const emoji = target.dataset.emoji;
+    const isCurrentlyActive = target.classList.contains("active");
+    const countEl = target.querySelector(".reaction-count");
+    let current = parseInt(countEl.textContent, 10) || 0;
+
+    // Оптимистичное обновление
+    if (isCurrentlyActive) {
+      target.classList.remove("active");
+      current = Math.max(0, current - 1);
+    } else {
+      target.classList.add("active");
+      current++;
+    }
+    countEl.textContent = current > 0 ? current : '';
+
+    // Отправка в БД
+    try {
+      await posts.toggleReaction(postId, emoji);
+    } catch (err) {
+      // Откат при ошибке
+      target.classList.toggle("active");
+      const revertCount = parseInt(countEl.textContent, 10) || 0;
+      countEl.textContent = (isCurrentlyActive ? revertCount + 1 : Math.max(0, revertCount - 1)) || '';
+      toast("Ошибка при реакции", "error");
+    }
+  }
+  else if (action === "toggle-like") {
     await posts.toggleLike(postId, target);
   } 
   else if (action === "edit-post") {
@@ -1183,12 +1198,6 @@ $("postsList").addEventListener("click", async (e) => {
       }
     }
   }
-
-  else if (action === "toggle-reaction") {
-  const emoji = target.dataset.emoji;
-  await posts.toggleReaction(postId, emoji);
-  
-}
 });
 
 // ===== IMAGE VIEWER =====
@@ -1229,21 +1238,6 @@ document.addEventListener("contextmenu", (e) => {
 document.addEventListener("dragstart", (e) => {
   if (e.target.matches("img")) e.preventDefault();
 }, { capture: true });
-
-
-
-setupSpinHover(document.getElementById("settingsBtn"), "svg");
-setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
-const themeToggle = document.getElementById("themeToggle");
-if (themeToggle) {
-  themeToggle.addEventListener("mouseenter", () => {
-    const activeIcon = $("iconMoon").style.display !== 'none' ? $("iconMoon") : $("iconSun");
-    if (activeIcon && !activeIcon.classList.contains("animate-spin")) {
-      activeIcon.classList.add("animate-spin");
-      setTimeout(() => activeIcon.classList.remove("animate-spin"), 800);
-    }
-  });
-}
 
 // ===== INIT =====
 autoGrowObserver.observe(document.body, { childList: true, subtree: true });
