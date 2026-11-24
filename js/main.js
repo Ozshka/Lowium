@@ -288,14 +288,6 @@ function hideNewPostsBanner() {
 }
 
 // ===== REALTIME =====
-function isUserTyping() {
-  const active = document.activeElement;
-  if (!active) return false;
-  if (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT") {
-    return active.value.trim().length > 0;
-  }
-  return false;
-}
 
 function isUserTyping() {
   const active = document.activeElement;
