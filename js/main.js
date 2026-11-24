@@ -430,9 +430,9 @@ function initRealtime() {
         renderPostsList();
       }
     })
-    }
     subscribe();
-}
+  }
+
 
 // ===== RENDER COMMENTS =====
 function renderCommentsInto(body, comments, postId) {
