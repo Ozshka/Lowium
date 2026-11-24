@@ -21,12 +21,7 @@ let profileAvatarFile = null;
   //requestAnimationFrame(raf);
 //}
 
-let lenis = null;
-if (window.Lenis) {
-  lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
-  function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-  requestAnimationFrame(raf);
-}
+
 
 // ===== THEME LOGIC =====
 const savedTheme = localStorage.getItem('theme') || 'light';
