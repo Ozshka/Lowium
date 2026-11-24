@@ -745,13 +745,15 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px; /* Чуть больше отступов, чтобы поместился плюс */
+  gap: 2px; /* Расстояние между смайликом и плюсом */
+  padding: 6px 10px;
   border-radius: 99px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
+  text-decoration: none; /* Убираем подчеркивание, если оно есть */
 }
 
 .reaction-trigger:hover {
@@ -763,4 +765,15 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 .reaction-trigger svg {
   width: 16px;
   height: 16px;
+}
+
+.plus-icon {
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  text-decoration: none;
+  text-shadow: none;
+  border: none;
+  display: inline-block;
+  transform: translateY(-1px); /* Легкая корректировка по вертикали, чтобы плюс стоял ровно */
 }
