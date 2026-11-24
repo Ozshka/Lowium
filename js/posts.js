@@ -33,21 +33,28 @@ export async function fetchPosts() {
   const likeCounts = {};
   const userLikes = new Set();
   
+
   const reactionsMap = {};
   const userReactions = new Set();
 
   if (postIds.length > 0) {
-   
-    const { data: cRows } = await supabase.from("comments").select("post_id").in("post_id", postIds);
-    if (cRows) cRows.forEach(r => { const k = String(r.post_id); commentCounts[k] = (commentCounts[k] || 0) + 1; });
-
     
+    const { data: cRows } = await supabase.from("comments").select("post_id").in("post_id", postIds);
+    if (cRows) {
+      cRows.forEach(r => { 
+        const k = String(r.post_id); 
+        commentCounts[k] = (commentCounts[k] || 0) + 1; 
+      });
+    }
+
     const { data: lRows } = await supabase.from("likes").select("post_id, user_id").in("post_id", postIds);
-    if (lRows) lRows.forEach(r => {
-      const k = String(r.post_id);
-      likeCounts[k] = (likeCounts[k] || 0) + 1;
-      if (auth.currentUser && r.user_id === auth.currentUser.id) userLikes.add(k);
-    });
+    if (lRows) {
+      lRows.forEach(r => {
+        const k = String(r.post_id);
+        likeCounts[k] = (likeCounts[k] || 0) + 1;
+        if (auth.currentUser && r.user_id === auth.currentUser.id) userLikes.add(k);
+      });
+    }
 
     
     const { data: rRows } = await supabase.from("post_reactions").select("post_id, emoji, user_id").in("post_id", postIds);
@@ -62,7 +69,7 @@ export async function fetchPosts() {
         }
       });
     }
-  }
+  } 
 
   likesCache.clear();
 
@@ -77,40 +84,8 @@ export async function fetchPosts() {
       author: authorProfile,
       is_owner: adminIds.has(post.user_id),
       comment_count: commentCounts[k] || 0,
-      reactions: reactionsMap[k] || {},      // <-- Передаем реакции
-      userReactions: userReactions          // <-- Передаем инфу о том, кто что лайкнул
-    };
-  });
-}
-
-  return (posts || []).map(post => {
-    const k = String(post.id);
-    // ...
-    return {
-      ...post,
-      author: authorProfile,
-      is_owner: adminIds.has(post.user_id),
-      comment_count: commentCounts[k] || 0,
       reactions: reactionsMap[k] || {},
-      userReactions: userReactions // <-- Передаем в пост
-    };
-    });
-    });
-  }
-
-   likesCache.clear();
-
-  return (posts || []).map(post => {
-    const k = String(post.id);
-    likesCache.set(k, { count: likeCounts[k] || 0, liked: userLikes.has(k) });
-    
-    const authorProfile = profileMap[post.user_id] || { display_name: "Anonymous", tag: "@anon", avatar_url: null, bio: null, region: null, is_verified: false };
-    
-    return {
-      ...post,
-      author: authorProfile,
-      is_owner: adminIds.has(post.user_id),
-      comment_count: commentCounts[k] || 0
+      userReactions: userReactions
     };
   });
 }
