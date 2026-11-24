@@ -1135,31 +1135,42 @@ $("postsList").addEventListener("click", async (e) => {
   const action = target.dataset.action;
   const postId = target.dataset.postId;
 
-  if (action === "toggle-reaction") {
+    if (action === "toggle-reaction") {
     const emoji = target.dataset.emoji;
     const isCurrentlyActive = target.classList.contains("active");
     const countEl = target.querySelector(".reaction-count");
-    let current = parseInt(countEl.textContent, 10) || 0;
-
-    // Оптимистичное обновление
+    
+    
+    let currentCount = parseInt(countEl.textContent, 10) || 0;
     if (isCurrentlyActive) {
       target.classList.remove("active");
-      current = Math.max(0, current - 1);
+      currentCount = Math.max(0, currentCount - 1);
     } else {
       target.classList.add("active");
-      current++;
+      currentCount++;
     }
-    countEl.textContent = current > 0 ? current : '';
+    
+    
+    countEl.textContent = currentCount > 0 ? currentCount : '0';
 
-    // Отправка в БД
+    
     try {
       await posts.toggleReaction(postId, emoji);
+      
+      // Если пилюля стала 0, полностью удаляем её из DOM (опционально)
+      if (currentCount === 0 && !isCurrentlyActive) {
+        target.remove();
+      }
     } catch (err) {
-      // Откат при ошибке
-      target.classList.toggle("active");
-      const revertCount = parseInt(countEl.textContent, 10) || 0;
-      countEl.textContent = (isCurrentlyActive ? revertCount + 1 : Math.max(0, revertCount - 1)) || '';
+      
       toast("Ошибка при реакции", "error");
+      if (isCurrentlyActive) {
+        target.classList.add("active");
+        countEl.textContent = currentCount + 1;
+      } else {
+        target.classList.remove("active");
+        countEl.textContent = currentCount - 1 > 0 ? currentCount - 1 : '0';
+      }
     }
   }
   else if (action === "toggle-like") {
