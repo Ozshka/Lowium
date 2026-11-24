@@ -1112,26 +1112,35 @@ $("postsList").addEventListener("click", async (e) => {
       menu.classList.add("open");
 
       if (menu.innerHTML === "") {
-        const picker = new EmojiMart.Picker({
+     const picker = new EmojiMart.Picker({
           onEmojiSelect: (emojiData) => {
             const emoji = emojiData.native;
             menu.classList.remove("open");
+            
             const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+            if (!postEl) return;
+            
             const footerLeft = postEl.querySelector(".post-footer-left");
+            if (!footerLeft) return;
+
             let existingPill = footerLeft.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
 
             if (existingPill) {
+              // Если реакция уже есть в DOM, просто кликаем по ней для переключения
               existingPill.click();
             } else {
+              // Если реакции нет, создаём её БЕЗ класса active и с нулем
               const newPill = document.createElement("button");
-              newPill.className = "reaction-pill active";
+              newPill.className = "reaction-pill"; 
               newPill.dataset.action = "toggle-reaction";
               newPill.dataset.postId = postId;
               newPill.dataset.emoji = emoji;
-              newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">1</span>`;
+              newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">0</span>`;
               
               const triggerEl = footerLeft.querySelector(".reaction-dropdown-wrapper");
               footerLeft.insertBefore(newPill, triggerEl);
+              
+              // Программный клик сделает её active и прибавит 1
               newPill.click();
             }
           },
