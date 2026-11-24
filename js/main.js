@@ -13,13 +13,14 @@ let pendingNewPostsCount = 0;
 let onboardingAvatarFile = null;
 let profileAvatarFile = null;
 
-// ===== LENIS SMOOTH SCROLL =====
-//let lenis = null;
-//if (window.Lenis) {
-  //lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
-  //function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
-  //requestAnimationFrame(raf);
-//}
+lenis = new window.Lenis({ 
+  duration: 0.8,      
+  smooth: true, 
+  smoothTouch: false,
+  wheelMultiplier: 1.2, 
+  touchMultiplier: 1.5,
+  syncTouch: true      
+});
 
 
 
