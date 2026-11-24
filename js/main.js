@@ -13,7 +13,8 @@ let pendingNewPostsCount = 0;
 let onboardingAvatarFile = null;
 let profileAvatarFile = null;
 
-// ===== THEME LOGIC =====
+const lenis = window.lenis || null;
+
 const savedTheme = localStorage.getItem('theme') || 'light';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
@@ -23,37 +24,31 @@ function updateThemeIcon(theme) {
 }
 updateThemeIcon(savedTheme);
 
-// ===== SPIN ANIMATION ON HOVER =====
 function setupSpinHover(element, innerSelector = null) {
   if (!element) return;
 
   element.addEventListener("mouseenter", () => {
-    // Ищем иконку прямо в момент наведения (чтобы найти именно видимую)
     const target = innerSelector ? element.querySelector(innerSelector) : element;
-    
+
     if (!target) return;
     if (target.classList.contains("animate-spin")) return;
-    
+
     target.classList.add("animate-spin");
     setTimeout(() => target.classList.remove("animate-spin"), 800);
   });
 }
 
-// Передаем селектор, который ищет только видимую иконку (у которой нет display: none)
 setupSpinHover(document.getElementById("themeToggle"), "svg:not([style*='display: none'])");
 setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
-// ===== THEME TOGGLE CLICK =====
 $("themeToggle").addEventListener("click", async () => {
-  // 1. Принудительно убираем класс анимации с обеих иконок
   $("iconMoon").classList.remove("animate-spin");
   $("iconSun").classList.remove("animate-spin");
 
-  // 2. Меняем тему
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
-  
+
   const applyTheme = () => {
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
@@ -61,10 +56,10 @@ $("themeToggle").addEventListener("click", async () => {
   };
 
   if (!document.startViewTransition) { applyTheme(); return; }
-  
+
   const x = window.innerWidth, y = 0, endRadius = Math.hypot(window.innerWidth, window.innerHeight);
   const transition = document.startViewTransition(applyTheme);
-  
+
   try {
     await transition.ready;
     document.documentElement.animate(
@@ -74,7 +69,6 @@ $("themeToggle").addEventListener("click", async () => {
   } catch (e) {}
 });
 
-// ===== REFRESH FEED =====
 async function refreshFeed(scrollToTop = false) {
   if (isRefreshing) return;
   isRefreshing = true;
@@ -89,7 +83,7 @@ async function refreshFeed(scrollToTop = false) {
   try {
     posts.clearPostsCache();
     await renderPostsList();
-    
+
     if (scrollToTop) {
       if (lenis) lenis.scrollTo(0, { immediate: false });
       else window.scrollTo({ top: 0, behavior: "smooth" });
@@ -113,7 +107,6 @@ async function refreshFeed(scrollToTop = false) {
 if ($("refreshBtn")) $("refreshBtn").addEventListener("click", () => refreshFeed(false));
 if ($("newPostsBanner")) $("newPostsBanner").addEventListener("click", () => refreshFeed(true));
 
-// ===== BADGES =====
 function getOwnerBadgeHtml() {
   return `<span class="owner-badge" title="Owner"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>`;
 }
@@ -123,7 +116,6 @@ function getVerifiedBadgeHtml(isVerified) {
   return `<span class="verified-badge" title="Verified"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>`;
 }
 
-// ===== PROFILE MODAL =====
 function openProfileModal(name, tag, avatar, bio, isOwner, region) {
   $("viewProfileName").innerHTML = escapeHtml(name || "User") + (isOwner ? getOwnerBadgeHtml() : "");
   $("viewProfileTag").textContent = tag || "";
@@ -161,12 +153,11 @@ function bindProfileClicks() {
   });
 }
 
-// ===== RENDER POSTS =====
 async function renderPostsList() {
   const postsList = $("postsList");
   try {
     const fetchedPosts = await posts.fetchPosts();
-    
+
     if (fetchedPosts.length === 0) {
       postsList.innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
       renderPendingVerifications();
@@ -178,7 +169,7 @@ async function renderPostsList() {
       let imagesHtml = "";
       const rawImages = post.image_urls?.length > 0 ? post.image_urls : (post.image_url ? [post.image_url] : []);
       const images = rawImages.map(sanitizeUrl).filter(Boolean);
-      
+
       if (images.length > 0) {
         imagesHtml = `<div class="post-gallery ${images.length === 1 ? 'single' : ''}">
           ${images.map(url => `<img src="${escapeHtml(url)}" loading="lazy" alt="Post image" />`).join("")}
@@ -187,11 +178,11 @@ async function renderPostsList() {
 
       const isAuthor = auth.currentUser && post.user_id === auth.currentUser.id;
       const canManage = isAuthor || auth.isAdmin;
-      
+
       const authorAvatar = sanitizeUrl(post.author.avatar_url) || DEFAULT_AVATAR;
       const authorName = post.author.display_name || post.author.tag || "Anonymous";
       const authorTag = post.author.tag || "";
-      
+
       const likeState = posts.getLikeState(postId);
       const likeBtnClass = likeState.liked ? "like-btn liked" : "like-btn";
       const likeIcon = likeState.liked ? "♥" : "♡";
@@ -199,14 +190,12 @@ async function renderPostsList() {
       const ownerBadge = post.is_owner ? getOwnerBadgeHtml() : "";
       const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
 
-      // РЕАКЦИИ
       const reactions = post.reactions || {};
       const userReactions = post.userReactions || new Set();
 
-      // 1. Блок с активными реакциями (пилюли)
       let activeReactionsHtml = "";
       const activeList = Object.keys(reactions).filter(e => reactions[e] > 0);
-      
+
       if (activeList.length > 0) {
         activeReactionsHtml = activeList.map(emoji => {
           const isActive = userReactions.has(`${postId}_${emoji}`);
@@ -217,7 +206,7 @@ async function renderPostsList() {
         }).join("");
       }
 
-       const dropdownHtml = `
+      const dropdownHtml = `
         <div class="reaction-dropdown-wrapper">
           <button class="reaction-trigger" type="button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -232,7 +221,7 @@ async function renderPostsList() {
         </div>
       `;
 
-       return `
+      return `
        <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
         <div class="post-author js-open-profile"
              data-name="${escapeHtml(authorName)}"
@@ -263,7 +252,7 @@ async function renderPostsList() {
               <span class="like-icon">${likeIcon}</span>
               <span class="like-count">${likeState.count}</span>
             </button>
-            
+
             ${activeReactionsHtml}
             ${dropdownHtml}
           </div>
@@ -273,7 +262,7 @@ async function renderPostsList() {
             <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
           </div>` : ""}
         </div>
-        
+
         <div class="comments-section" data-comments-for="${escapeHtml(postId)}">
           <button class="comments-toggle" data-action="toggle-comments" data-post-id="${escapeHtml(postId)}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
@@ -285,7 +274,7 @@ async function renderPostsList() {
         </div>
       </article>`;
     }).join("");
-    
+
     bindProfileClicks();
     renderPendingVerifications();
   } catch (err) {
@@ -294,7 +283,6 @@ async function renderPostsList() {
   }
 }
 
-// ===== NEW POSTS BANNER =====
 function showNewPostsBanner(count) {
   pendingNewPostsCount += count;
   const banner = $("newPostsBanner");
@@ -312,7 +300,6 @@ function hideNewPostsBanner() {
   if (banner) banner.hidden = true;
 }
 
-// ===== REALTIME =====
 function isUserTyping() {
   const active = document.activeElement;
   if (!active) return false;
@@ -335,7 +322,7 @@ function initRealtime() {
       else if (payload.eventType === 'DELETE') {
         const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
         if (el) el.remove();
-      } 
+      }
       else if (payload.eventType === 'UPDATE') {
         if (payload.new.user_id !== auth.currentUser?.id && !isUserTyping()) renderPostsList();
       }
@@ -389,13 +376,13 @@ function initRealtime() {
 
       const likeIcon = btn.querySelector(".like-icon");
       const countEl = btn.querySelector(".like-count");
-      
+
       if (payload.eventType === 'INSERT') {
         if (payload.new.user_id !== auth.currentUser?.id) {
           btn.classList.add("liked");
           likeIcon.textContent = "♥";
           countEl.textContent = String(parseInt(countEl.textContent || 0, 10) + 1);
-          
+
           const k = String(postId);
           const cached = posts.likesCache.get(k) || { count: 0, liked: false };
           cached.count++;
@@ -421,30 +408,24 @@ function initRealtime() {
       }
       renderPendingVerifications();
     })
-     .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
       let postId = payload.new?.post_id || payload.old?.post_id;
 
-      // Если это DELETE и post_id нет, ищем его в DOM по эмодзи
       if (payload.eventType === 'DELETE' && !postId) {
         const emoji = payload.old.emoji;
-        // Ищем любую кнопку с этой реакцией (она привязана к конкретному посту)
         const btn = document.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
         if (btn) postId = btn.dataset.postId;
       }
 
       if (!postId) return;
 
-      // Игнорируем свои реакции, если мы уже обновили UI (но мы вызываем renderPostsList, так что можно не игнорировать)
-      // Вместо этого просто перерисовываем ленту, чтобы счетчики всегда были актуальны
       if (!isUserTyping()) {
         renderPostsList();
       }
     })
     .subscribe();
-  }
+}
 
-
-// ===== RENDER COMMENTS =====
 function renderCommentsInto(body, comments, postId) {
   if (!comments) {
     body.innerHTML = `<div class="comments-empty">Could not load comments.</div>`;
@@ -499,19 +480,18 @@ function renderCommentsInto(body, comments, postId) {
   bindProfileClicks();
 }
 
-// ===== PENDING VERIFICATIONS =====
 async function renderPendingVerifications() {
   if (!auth.isAdmin) return;
-  
+
   const existing = document.getElementById("pendingVerificationsBlock");
   if (existing) existing.remove();
-  
+
   const { data: requests, error } = await supabase
     .from("verification_requests")
     .select("id, message, created_at, user_id")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
-  
+
   if (error) return console.error("Verification request error:", error);
   if (!requests || requests.length === 0) return;
 
@@ -520,13 +500,13 @@ async function renderPendingVerifications() {
   const profileMap = {};
   (profiles || []).forEach(p => { profileMap[p.id] = p; });
   const data = requests.map(r => ({ ...r, profiles: profileMap[r.user_id] || null }));
-  
+
   const section = document.createElement("div");
   section.id = "pendingVerificationsBlock";
   section.className = "card";
   section.style.padding = "24px";
   section.style.marginBottom = "24px";
-  
+
   section.innerHTML = `<h3 style="font-family: 'Lora', serif; margin-bottom: 16px;">Pending Verifications (${data.length})</h3>
     ${data.map(r => `
       <div style="padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
@@ -541,9 +521,9 @@ async function renderPendingVerifications() {
       </div>
     `).join("")}
   `;
-  
+
   $("postsList").prepend(section);
-  
+
   section.querySelectorAll("[data-approve]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const { error } = await supabase.from("verification_requests").update({ status: "approved" }).eq("id", btn.dataset.approve);
@@ -553,7 +533,7 @@ async function renderPendingVerifications() {
       renderPendingVerifications();
     });
   });
-  
+
   section.querySelectorAll("[data-reject]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const { error } = await supabase.from("verification_requests").update({ status: "rejected" }).eq("id", btn.dataset.reject);
@@ -565,7 +545,6 @@ async function renderPendingVerifications() {
   });
 }
 
-// ===== START APP =====
 async function startApp() {
   try {
     await auth.refreshSession(
@@ -574,18 +553,18 @@ async function startApp() {
         document.body.classList.remove("auth-mode");
         $("mainSite").classList.remove("hidden");
         $("mainFooter").classList.remove("hidden");
-        
+
         $("userProfile").classList.add("active");
         $("settingsBtn").style.display = "block";
         $("logoutBtn").style.display = "block";
-        
+
         const headerBadge = auth.isAdmin ? getOwnerBadgeHtml() : "";
         $("headerUsername").innerHTML = escapeHtml(auth.currentProfile?.display_name || auth.currentProfile?.tag || "User") + headerBadge + getVerifiedBadgeHtml(auth.currentProfile?.is_verified);
         $("headerAvatar").src = sanitizeUrl(auth.currentProfile?.avatar_url) || DEFAULT_AVATAR;
 
         $("editor").classList.add("open");
         renderPostsList();
-        initRealtime();     
+        initRealtime();
         setTimeout(() => { initAutoGrow(); autoGrow($("postContent")); }, 50);
       },
       () => {
@@ -612,7 +591,6 @@ async function startApp() {
   }
 }
 
-// ===== AUTH FORMS =====
 window.toggleAuthView = function(view) {
   if (view === 'signup') {
     $("loginFormView").style.display = "none";
@@ -689,11 +667,11 @@ $("loginForm").addEventListener("submit", async (e) => {
 $("signupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("signupError").style.display = "none";
-  
+
   const password = $("signupPassword").value;
   const validation = validatePassword(password);
   const allValid = Object.values(validation).every(Boolean);
-  
+
   if (!allValid) {
     $("signupError").textContent = "Please meet all password requirements.";
     $("signupError").style.display = "block";
@@ -721,7 +699,6 @@ $("signupForm").addEventListener("submit", async (e) => {
   }
 });
 
-// ===== SETTINGS =====
 $("logoutBtn").addEventListener("click", auth.handleLogout);
 
 $("settingsBtn").addEventListener("click", () => {
@@ -742,10 +719,10 @@ $("updateEmailBtn").addEventListener("click", async () => {
   $("updateEmailBtn").textContent = "Updating...";
 
   const { error } = await supabase.auth.updateUser({ email: newEmail });
-  
+
   $("updateEmailBtn").disabled = false;
   $("updateEmailBtn").textContent = "Update Email";
-  
+
   if (error) {
     $("emailError").textContent = error.message;
     $("emailError").style.display = "block";
@@ -763,10 +740,10 @@ $("updatePassBtn").addEventListener("click", async () => {
   $("updatePassBtn").textContent = "Updating...";
 
   const { error } = await supabase.auth.updateUser({ password: newPass });
-  
+
   $("updatePassBtn").disabled = false;
   $("updatePassBtn").textContent = "Update Password";
-  
+
   if (error) {
     $("passError").textContent = error.message;
     $("passError").style.display = "block";
@@ -784,10 +761,9 @@ $("deleteAccountBtn").addEventListener("click", async () => {
   else { await supabase.auth.signOut(); window.location.reload(); }
 });
 
-// ===== EDITOR / PUBLISH =====
 $("publishBtn").addEventListener("click", async () => {
   if (!auth.currentUser) return;
-  
+
   if (!auth.currentProfile?.is_verified) {
     $("verificationError").style.display = "none";
     $("verificationModal").classList.add("open");
@@ -876,7 +852,7 @@ if (postContentEl && previewGrid) {
   postContentEl.addEventListener("paste", (e) => {
     const items = e.clipboardData?.items;
     if (!items) return;
-    
+
     let hasImage = false;
     for (const item of items) {
       if (item.type.startsWith("image/")) {
@@ -903,7 +879,7 @@ function renderPreviewGrid() {
       <button class="remove-btn" type="button" data-remove-index="${i}">×</button>
     </div>
   `).join("");
-  
+
   previewGrid.querySelectorAll("[data-remove-index]").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.removeIndex, 10);
@@ -930,26 +906,25 @@ if (postImageInput) {
   });
 }
 
-// ===== VERIFICATION =====
 $("submitVerification").addEventListener("click", async () => {
   const message = $("verificationMessage").value.trim();
   const errorEl = $("verificationError");
   errorEl.style.display = "none";
-  
+
   if (!message) {
     errorEl.textContent = "Please write something.";
     errorEl.style.display = "block";
     return;
   }
-  
+
   $("submitVerification").disabled = true;
   $("submitVerification").textContent = "Submitting...";
-  
+
   const { error } = await supabase.from("verification_requests").insert({ user_id: auth.currentUser.id, message });
-  
+
   $("submitVerification").disabled = false;
   $("submitVerification").textContent = "Submit Request";
-  
+
   if (error) {
     if (error.code === "23505") errorEl.textContent = "You already have a pending request. Please wait.";
     else errorEl.textContent = error.message;
@@ -964,7 +939,6 @@ $("submitVerification").addEventListener("click", async () => {
 $("cancelVerification").addEventListener("click", () => $("verificationModal").classList.remove("open"));
 $("verificationModal").addEventListener("click", (e) => { if (e.target === $("verificationModal")) $("verificationModal").classList.remove("open"); });
 
-// ===== ONBOARDING =====
 $("submitOnboardingTag").addEventListener("click", async () => {
   const tag = $("onboardingTag").value.trim();
   const errorEl = $("onboardingError");
@@ -1029,7 +1003,6 @@ $("submitOnboardingProfile").addEventListener("click", async () => {
   }
 });
 
-// ===== EDIT PROFILE =====
 $("avatarInput").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1082,20 +1055,15 @@ $("openEditProfileBtn").addEventListener("click", () => {
   $("profileModal").classList.add("open");
 });
 
-// ===== GLOBAL MODAL CLOSES =====
 $("viewProfileModal").addEventListener("click", (e) => { if (e.target === $("viewProfileModal")) $("viewProfileModal").classList.remove("open"); });
 $("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").classList.remove("open"); });
 $("settingsModal").addEventListener("click", (e) => { if (e.target === $("settingsModal")) $("settingsModal").classList.remove("open"); });
 
-// ===== POSTS LIST EVENT DELEGATION =====
 $("postsList").addEventListener("click", async (e) => {
-
-    // Закрываем все меню, если кликнули вне
   if (!e.target.closest(".reaction-dropdown-wrapper")) {
     document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
   }
 
-  // Открываем меню EmojiMart
   const trigger = e.target.closest(".reaction-trigger");
   if (trigger) {
     const wrapper = trigger.closest(".reaction-dropdown-wrapper");
@@ -1103,36 +1071,31 @@ $("postsList").addEventListener("click", async (e) => {
     const postId = menu.dataset.postId;
     const isOpen = menu.classList.contains("open");
 
-    // Закрываем все остальные меню
     document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
-    
+
     if (!isOpen) {
       menu.classList.add("open");
-      
-      // Если меню еще пустое — инициализируем EmojiMart
+
       if (menu.innerHTML === "") {
         const picker = new EmojiMart.Picker({
           onEmojiSelect: async (emojiData) => {
             const emoji = emojiData.native;
-            menu.classList.remove("open"); // Закрываем меню
-            
+            menu.classList.remove("open");
+
             try {
-              // Отправляем в базу
               await posts.toggleReaction(postId, emoji);
-              
-              // После успешной отправки аккуратно обновляем только этот пост
+
               const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
               const footerLeft = postEl.querySelector(".post-footer-left");
-              const trigger = footerLeft.querySelector(".reaction-dropdown-wrapper");
-              
-              // Ищем, есть ли уже такая пилюля
+              const triggerEl = footerLeft.querySelector(".reaction-dropdown-wrapper");
+
               let existingPill = footerLeft.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
-              
+
               if (existingPill) {
                 const countEl = existingPill.querySelector(".reaction-count");
                 const isActive = existingPill.classList.contains("active");
                 let current = parseInt(countEl.textContent, 10) || 0;
-                
+
                 if (isActive) {
                   existingPill.classList.remove("active");
                   current = Math.max(0, current - 1);
@@ -1149,8 +1112,8 @@ $("postsList").addEventListener("click", async (e) => {
                 newPill.dataset.postId = postId;
                 newPill.dataset.emoji = emoji;
                 newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">1</span>`;
-                
-                footerLeft.insertBefore(newPill, trigger);
+
+                footerLeft.insertBefore(newPill, triggerEl);
               }
             } catch (err) {
               toast("Ошибка при реакции: " + err.message, "error");
@@ -1169,54 +1132,44 @@ $("postsList").addEventListener("click", async (e) => {
 
   const target = e.target.closest("[data-action]");
   if (!target) return;
-  
+
   const action = target.dataset.action;
   const postId = target.dataset.postId;
 
   if (action === "toggle-reaction") {
     await posts.toggleReaction(postId, target);
-
-  const target = e.target.closest("[data-action]");
-  if (!target) return;
-  
-  const action = target.dataset.action;
-  const postId = target.dataset.postId;
-
-     if (action === "toggle-reaction") {
-    await posts.toggleReaction(postId, target);
   }
-
   else if (action === "toggle-like") {
     await posts.toggleLike(postId, target);
-  } 
+  }
   else if (action === "edit-post") {
     const article = target.closest(".post");
     const title = article.querySelector("h2").textContent;
     const content = article.querySelector(".post-content").textContent;
     const existingImages = article.querySelectorAll(".post-gallery img");
-    
+
     editingPostId = postId;
     $("postTitle").value = title;
     $("postContent").value = content;
     autoGrow($("postContent"));
-    
+
     pastedImages = Array.from(existingImages).map(img => img.src);
     renderPreviewGrid();
-    
+
     $("publishBtn").textContent = "Save Changes";
     $("cancelEditBtn").classList.add("visible");
-    
+
     $("editor").scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
   else if (action === "delete-post") {
     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
       const { error } = await supabase.from("posts").delete().eq("id", postId);
       if (error) return toast("Error deleting post: " + error.message, "error");
-      
+
       const postEl = target.closest(".post");
       if (postEl) postEl.remove();
       toast("Post deleted.", "success");
-      
+
       if ($("postsList").children.length === 0) {
         $("postsList").innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
       }
@@ -1266,7 +1219,7 @@ $("postsList").addEventListener("click", async (e) => {
 
     try {
       await posts.submitComment(postId, content);
-      textarea.value = ""; 
+      textarea.value = "";
     } catch (err) {
       if (err.message === "VERIFICATION_REQUIRED") {
         $("verificationError").style.display = "none";
@@ -1278,7 +1231,6 @@ $("postsList").addEventListener("click", async (e) => {
   }
 });
 
-// ===== IMAGE VIEWER =====
 document.addEventListener("click", (e) => {
   if (e.target.matches(".post-gallery img")) {
     $("imageViewerImg").src = e.target.src;
@@ -1296,7 +1248,6 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && $("imageViewer").classList.contains("open")) $("imageViewer").classList.remove("open");
 });
 
-// ===== GLOBAL ERRORS =====
 window.addEventListener("error", (event) => {
   console.error("Global error:", event.error);
   const preloader = document.getElementById("preloader");
@@ -1306,7 +1257,6 @@ window.addEventListener("error", (event) => {
   }
 });
 
-// ===== ANTI RIGHT CLICK =====
 document.addEventListener("contextmenu", (e) => {
   if (e.target.matches("img, .post-gallery img, .post-author-avatar, .comment-avatar, .user-avatar-small, .profile-avatar-preview, #imageViewerImg")) {
     e.preventDefault();
@@ -1317,6 +1267,5 @@ document.addEventListener("dragstart", (e) => {
   if (e.target.matches("img")) e.preventDefault();
 }, { capture: true });
 
-// ===== INIT =====
 autoGrowObserver.observe(document.body, { childList: true, subtree: true });
 startApp();
