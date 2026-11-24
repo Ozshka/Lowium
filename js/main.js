@@ -49,6 +49,12 @@ setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
 $("themeToggle").addEventListener("click", async () => {
+  // 1. Принудительно убираем класс анимации с обеих иконок, 
+  // чтобы они не "застывали" в процессе смены темы
+  $("iconMoon").classList.remove("animate-spin");
+  $("iconSun").classList.remove("animate-spin");
+
+  // 2. Дальше твой обычный код смены темы
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   
@@ -71,7 +77,6 @@ $("themeToggle").addEventListener("click", async () => {
     );
   } catch (e) {}
 });
-
 // ===== REFRESH FEED =====
 async function refreshFeed(scrollToTop = false) {
   if (isRefreshing) return;
