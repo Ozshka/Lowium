@@ -558,7 +558,7 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 }
 .empty-state p { font-size: 1rem; margin: 0; letter-spacing: 0.02em; }
 
-.post { animation: floatIn 0.4s var(--ease-smooth) both; animation-delay: calc(var(--index, 0) * 0.04s); transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+.post { animation: floatIn 0.4s var(--ease-smooth) both; /*animation-delay: calc(var(--index, 0) * 0.04s);*/ transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
 .post:hover { transform: translateY(-2px); }
 
 .post h2 { transition: color 0.3s ease; }
