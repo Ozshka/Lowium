@@ -1173,7 +1173,16 @@ document.addEventListener("dragstart", (e) => {
 
 setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
-setupSpinHover(document.getElementById("themeToggle"), "svg");
+const themeToggle = document.getElementById("themeToggle");
+if (themeToggle) {
+  themeToggle.addEventListener("mouseenter", () => {
+    const activeIcon = $("iconMoon").style.display !== 'none' ? $("iconMoon") : $("iconSun");
+    if (activeIcon && !activeIcon.classList.contains("animate-spin")) {
+      activeIcon.classList.add("animate-spin");
+      setTimeout(() => activeIcon.classList.remove("animate-spin"), 800);
+    }
+  });
+}
 
 // ===== INIT =====
 autoGrowObserver.observe(document.body, { childList: true, subtree: true });
