@@ -226,35 +226,29 @@ export async function deleteComment(commentId, postId) {
 }
 
 export async function toggleReaction(postId, emoji) {
-  postId = String(postId);
   if (!auth.currentUser) return;
 
-  // 1. Проверяем, есть ли уже такая реакция от этого юзера
-  const { data: existing, error: checkError } = await supabase
+  const userId = auth.currentUser.id;
+
+  // 1. Пытаемся удалить — если удалили, значит toggle off
+  const { data: deleted, error: delErr } = await supabase
     .from("post_reactions")
-    .select("id")
-    .eq("post_id", postId)
-    .eq("user_id", auth.currentUser.id)
-    .eq("emoji", emoji)
-    .maybeSingle();
+    .delete()
+    .match({ post_id: postId, user_id: userId, emoji })
+    .select("id");
 
-  if (checkError) throw checkError;
+  if (delErr) throw delErr;
 
-  // 2. Если есть — удаляем, если нет — добавляем
-  if (existing) {
-    const { error } = await supabase
-      .from("post_reactions")
-      .delete()
-      .eq("id", existing.id);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from("post_reactions")
-      .insert({ 
-        post_id: postId, 
-        user_id: auth.currentUser.id, 
-        emoji: emoji 
-      });
-    if (error) throw error;
+  if (deleted && deleted.length > 0) {
+    return { action: "removed" };
   }
+
+  // 2. Нечего удалять → вставляем; 23505 = кто-то уже вставил параллельно — не падаем
+  const { error: insErr } = await supabase
+    .from("post_reactions")
+    .insert({ post_id: postId, user_id: userId, emoji });
+
+  if (insErr && insErr.code !== "23505") throw insErr;
+
+  return { action: "added" };
 }
