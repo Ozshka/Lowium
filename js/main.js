@@ -14,6 +14,13 @@ let onboardingAvatarFile = null;
 let profileAvatarFile = null;
 
 // ===== LENIS SMOOTH SCROLL =====
+//let lenis = null;
+//if (window.Lenis) {
+  //lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
+  //function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+  //requestAnimationFrame(raf);
+//}
+
 let lenis = null;
 if (window.Lenis) {
   lenis = new window.Lenis({ duration: 1.2, smooth: true, smoothTouch: false });
