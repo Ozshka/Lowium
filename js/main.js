@@ -430,7 +430,7 @@ function initRealtime() {
         renderPostsList();
       }
     })
-    subscribe();
+    .subscribe();
   }
 
 
