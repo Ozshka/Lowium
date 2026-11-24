@@ -1114,11 +1114,44 @@ $("postsList").addEventListener("click", async (e) => {
         const picker = new EmojiMart.Picker({
           onEmojiSelect: async (emojiData) => {
             const emoji = emojiData.native;
-            menu.classList.remove("open"); // Закрываем после выбора
+            menu.classList.remove("open"); // Закрываем меню
             
             try {
+              // Отправляем в базу
               await posts.toggleReaction(postId, emoji);
-              renderPostsList(); // Перерисовываем, чтобы обновить счетчики
+              
+              // После успешной отправки аккуратно обновляем только этот пост
+              const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+              const footerLeft = postEl.querySelector(".post-footer-left");
+              const trigger = footerLeft.querySelector(".reaction-dropdown-wrapper");
+              
+              // Ищем, есть ли уже такая пилюля
+              let existingPill = footerLeft.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
+              
+              if (existingPill) {
+                const countEl = existingPill.querySelector(".reaction-count");
+                const isActive = existingPill.classList.contains("active");
+                let current = parseInt(countEl.textContent, 10) || 0;
+                
+                if (isActive) {
+                  existingPill.classList.remove("active");
+                  current = Math.max(0, current - 1);
+                  if (current === 0) existingPill.remove();
+                  else countEl.textContent = current;
+                } else {
+                  existingPill.classList.add("active");
+                  countEl.textContent = current + 1;
+                }
+              } else {
+                const newPill = document.createElement("button");
+                newPill.className = "reaction-pill active";
+                newPill.dataset.action = "toggle-reaction";
+                newPill.dataset.postId = postId;
+                newPill.dataset.emoji = emoji;
+                newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">1</span>`;
+                
+                footerLeft.insertBefore(newPill, trigger);
+              }
             } catch (err) {
               toast("Ошибка при реакции: " + err.message, "error");
             }
@@ -1140,44 +1173,19 @@ $("postsList").addEventListener("click", async (e) => {
   const action = target.dataset.action;
   const postId = target.dataset.postId;
 
-    if (action === "toggle-reaction") {
-    const emoji = target.dataset.emoji;
-    const isCurrentlyActive = target.classList.contains("active");
-    const countEl = target.querySelector(".reaction-count");
-    
-    
-    let currentCount = parseInt(countEl.textContent, 10) || 0;
-    if (isCurrentlyActive) {
-      target.classList.remove("active");
-      currentCount = Math.max(0, currentCount - 1);
-    } else {
-      target.classList.add("active");
-      currentCount++;
-    }
-    
-    
-    countEl.textContent = currentCount > 0 ? currentCount : '0';
+  if (action === "toggle-reaction") {
+    await posts.toggleReaction(postId, target);
 
-    
-    try {
-      await posts.toggleReaction(postId, emoji);
-      
-      // Если пилюля стала 0, полностью удаляем её из DOM (опционально)
-      if (currentCount === 0 && !isCurrentlyActive) {
-        target.remove();
-      }
-    } catch (err) {
-      
-      toast("Ошибка при реакции", "error");
-      if (isCurrentlyActive) {
-        target.classList.add("active");
-        countEl.textContent = currentCount + 1;
-      } else {
-        target.classList.remove("active");
-        countEl.textContent = currentCount - 1 > 0 ? currentCount - 1 : '0';
-      }
-    }
+  const target = e.target.closest("[data-action]");
+  if (!target) return;
+  
+  const action = target.dataset.action;
+  const postId = target.dataset.postId;
+
+     if (action === "toggle-reaction") {
+    await posts.toggleReaction(postId, target);
   }
+
   else if (action === "toggle-like") {
     await posts.toggleLike(postId, target);
   } 
