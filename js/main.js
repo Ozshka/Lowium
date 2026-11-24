@@ -196,6 +196,20 @@ async function renderPostsList() {
       const ownerBadge = post.is_owner ? getOwnerBadgeHtml() : "";
       const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
 
+      // Перед return в renderPostsList:
+const reactions = post.reactions || {};
+const reactionEmojis = ["🔥", "😂", "🤔", "💯"];
+
+const reactionsHtml = reactionEmojis.map(emoji => {
+  const count = reactions[emoji] || 0;
+  const activeClass = count > 0 ? "active" : ""; // Можно добавить класс, если реакция есть
+  return `<button class="reaction-btn ${activeClass}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
+    <span class="reaction-emoji">${emoji}</span>
+    <span class="reaction-count">${count > 0 ? count : ''}</span>
+  </button>`;
+}).join("");
+
+
       return `
        <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
         <div class="post-author js-open-profile"
@@ -222,6 +236,9 @@ async function renderPostsList() {
         <div class="post-content">${escapeHtml(post.content)}</div>
 
         <div class="post-footer">
+        <div class="post-reactions">
+      ${reactionsHtml}
+    </div>
           <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeState.count}</span>
@@ -381,6 +398,32 @@ function initRealtime() {
       renderPendingVerifications();
     })
     .subscribe();
+
+  // 5. СЛУШАЕМ РЕАКЦИИ
+.on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
+  const postId = payload.new?.post_id || payload.old?.post_id;
+  if (!postId) return;
+
+  const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+  if (!postEl) return;
+
+  const emoji = payload.new?.emoji || payload.old?.emoji;
+  const btn = postEl.querySelector(`[data-action="toggle-reaction"][data-emoji="${emoji}"]`);
+  if (!btn) return;
+
+  const countEl = btn.querySelector(".reaction-count");
+  let current = parseInt(countEl.textContent, 10) || 0;
+
+  if (payload.eventType === 'INSERT') {
+    current++;
+    btn.classList.add("active");
+  } else if (payload.eventType === 'DELETE') {
+    current = Math.max(0, current - 1);
+    if (current === 0) btn.classList.remove("active");
+  }
+
+  countEl.textContent = current > 0 ? current : '';
+})
 }
 
 // ===== RENDER COMMENTS =====
@@ -1124,6 +1167,12 @@ $("postsList").addEventListener("click", async (e) => {
       }
     }
   }
+
+  else if (action === "toggle-reaction") {
+  const emoji = target.dataset.emoji;
+  await posts.toggleReaction(postId, emoji);
+  
+}
 });
 
 // ===== IMAGE VIEWER =====
