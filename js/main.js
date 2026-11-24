@@ -491,13 +491,10 @@ function renderCommentsInto(body, comments, postId) {
                       data-bio="${escapeHtml(bio)}"
                       data-region="${escapeHtml(region)}"
                       data-owner="${c.is_owner || false}">${escapeHtml(nm)}${badge}${vBadge}</span>
-<div class="comment-meta">
-  <span class="comment-date">${formatShortDate(c.created_at)}</span>
-  ${isAuth ? `<button class="comment-delete" type="button" data-action="delete-comment" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
-</div>
-                    data-action="delete-comment"
-                    data-comment-id="${escapeHtml(c.id)}"
-                    data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
+                <div class="comment-meta">
+                  <span class="comment-date">${formatShortDate(c.created_at)}</span>
+                  ${isAuth ? `<button class="comment-delete" type="button" data-action="delete-comment" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">🗑</button>` : ""}
+                </div>
               </div>
               <div class="comment-text">${escapeHtml(c.content)}</div>
             </div>
