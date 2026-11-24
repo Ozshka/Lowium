@@ -1078,45 +1078,26 @@ $("postsList").addEventListener("click", async (e) => {
 
       if (menu.innerHTML === "") {
         const picker = new EmojiMart.Picker({
-          onEmojiSelect: async (emojiData) => {
+          onEmojiSelect: (emojiData) => {
             const emoji = emojiData.native;
             menu.classList.remove("open");
+            const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+            const footerLeft = postEl.querySelector(".post-footer-left");
+            let existingPill = footerLeft.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
 
-            try {
-              await posts.toggleReaction(postId, emoji);
-
-              const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
-              const footerLeft = postEl.querySelector(".post-footer-left");
+            if (existingPill) {
+              existingPill.click();
+            } else {
+              const newPill = document.createElement("button");
+              newPill.className = "reaction-pill active";
+              newPill.dataset.action = "toggle-reaction";
+              newPill.dataset.postId = postId;
+              newPill.dataset.emoji = emoji;
+              newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">1</span>`;
+              
               const triggerEl = footerLeft.querySelector(".reaction-dropdown-wrapper");
-
-              let existingPill = footerLeft.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
-
-              if (existingPill) {
-                const countEl = existingPill.querySelector(".reaction-count");
-                const isActive = existingPill.classList.contains("active");
-                let current = parseInt(countEl.textContent, 10) || 0;
-
-                if (isActive) {
-                  existingPill.classList.remove("active");
-                  current = Math.max(0, current - 1);
-                  if (current === 0) existingPill.remove();
-                  else countEl.textContent = current;
-                } else {
-                  existingPill.classList.add("active");
-                  countEl.textContent = current + 1;
-                }
-              } else {
-                const newPill = document.createElement("button");
-                newPill.className = "reaction-pill active";
-                newPill.dataset.action = "toggle-reaction";
-                newPill.dataset.postId = postId;
-                newPill.dataset.emoji = emoji;
-                newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">1</span>`;
-
-                footerLeft.insertBefore(newPill, triggerEl);
-              }
-            } catch (err) {
-              toast("Ошибка при реакции: " + err.message, "error");
+              footerLeft.insertBefore(newPill, triggerEl);
+              newPill.click();
             }
           },
           theme: document.documentElement.getAttribute("data-theme") || "light",
@@ -1137,10 +1118,37 @@ $("postsList").addEventListener("click", async (e) => {
   const postId = target.dataset.postId;
 
   if (action === "toggle-reaction") {
-    await posts.toggleReaction(postId, target);
+    const emoji = target.dataset.emoji;
+    const isActive = target.classList.contains("active");
+    const countEl = target.querySelector(".reaction-count");
+    
+    if (isActive) {
+      target.classList.remove("active");
+      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+    } else {
+      target.classList.add("active");
+      if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+    }
+
+    try {
+      await posts.toggleReaction(postId, emoji);
+    } catch (err) {
+      if (isActive) {
+        target.classList.add("active");
+        if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+      } else {
+        target.classList.remove("active");
+        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+      }
+      toast("Ошибка при реакции: " + err.message, "error");
+    }
   }
   else if (action === "toggle-like") {
-    await posts.toggleLike(postId, target);
+    try {
+      await posts.toggleLike(postId, target);
+    } catch (err) {
+      toast("Ошибка при лайке: " + err.message, "error");
+    }
   }
   else if (action === "edit-post") {
     const article = target.closest(".post");
@@ -1163,15 +1171,19 @@ $("postsList").addEventListener("click", async (e) => {
   }
   else if (action === "delete-post") {
     if (await confirmDialog("Delete this post?", { title: "Delete", okText: "Yes" })) {
-      const { error } = await supabase.from("posts").delete().eq("id", postId);
-      if (error) return toast("Error deleting post: " + error.message, "error");
+      try {
+        const { error } = await supabase.from("posts").delete().eq("id", postId);
+        if (error) throw error;
+        
+        const postEl = target.closest(".post");
+        if (postEl) postEl.remove();
+        toast("Post deleted.", "success");
 
-      const postEl = target.closest(".post");
-      if (postEl) postEl.remove();
-      toast("Post deleted.", "success");
-
-      if ($("postsList").children.length === 0) {
-        $("postsList").innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
+        if ($("postsList").children.length === 0) {
+          $("postsList").innerHTML = `<div class="card empty-state"><p>It's quiet here... Write your first post!</p></div>`;
+        }
+      } catch (err) {
+        toast("Error deleting post: " + err.message, "error");
       }
     }
   }
