@@ -297,34 +297,50 @@ function isUserTyping() {
   return false;
 }
 
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  if (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.tagName === "SELECT") {
+    return active.value.trim().length > 0;
+  }
+  return false;
+}
+
 function initRealtime() {
-  if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+  }
 
   realtimeChannel = supabase.channel('realtime:public')
-    // 1. Посты
+    // 1. СЛУШАЕМ ПОСТЫ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, async (payload) => {
       if (payload.eventType === 'INSERT') {
-        if (payload.new.user_id !== auth.currentUser?.id) showNewPostsBanner(1);
+        if (payload.new.user_id !== auth.currentUser?.id) {
+          showNewPostsBanner(1);
+        }
       }
       else if (payload.eventType === 'DELETE') {
         const el = document.querySelector(`.post[data-post-id="${payload.old.id}"]`);
         if (el) el.remove();
       } 
       else if (payload.eventType === 'UPDATE') {
-        if (payload.new.user_id !== auth.currentUser?.id && !isUserTyping()) renderPostsList();
+        if (payload.new.user_id !== auth.currentUser?.id && !isUserTyping()) {
+          renderPostsList();
+        }
       }
     })
-    // 2. Комментарии
+    
+    // 2. СЛУШАЕМ КОММЕНТАРИИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, (payload) => {
       let postId = payload.new?.post_id || payload.old?.post_id;
 
-      // Запасной план для DELETE
       if (payload.eventType === 'DELETE' && !postId) {
         const btnEl = document.querySelector(`[data-action="delete-comment"][data-comment-id="${payload.old.id}"]`);
         if (btnEl) postId = btnEl.dataset.postId;
       }
 
       if (!postId) return;
+
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
@@ -353,7 +369,8 @@ function initRealtime() {
         }
       }
     })
-    // 3. Лайки
+    
+    // 3. СЛУШАЕМ ЛАЙКИ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'likes' }, (payload) => {
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
@@ -372,6 +389,7 @@ function initRealtime() {
           btn.classList.add("liked");
           likeIcon.textContent = "♥";
           countEl.textContent = String(parseInt(countEl.textContent || 0, 10) + 1);
+          
           const k = String(postId);
           const cached = posts.likesCache.get(k) || { count: 0, liked: false };
           cached.count++;
@@ -382,6 +400,7 @@ function initRealtime() {
           btn.classList.remove("liked");
           likeIcon.textContent = "♡";
           countEl.textContent = String(Math.max(0, parseInt(countEl.textContent || 0, 10) - 1));
+
           const k = String(postId);
           const cached = posts.likesCache.get(k) || { count: 0, liked: false };
           cached.count = Math.max(0, cached.count - 1);
@@ -389,41 +408,49 @@ function initRealtime() {
         }
       }
     })
-    // 4. Верификация
+
+    // 4. СЛУШАЕМ ЗАЯВКИ НА ВЕРИФИКАЦИЮ
     .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
       if (!auth.isAdmin) return;
+
       if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
         toast("Новая заявка на верификацию!", "info");
       }
       renderPendingVerifications();
     })
-    .subscribe();
 
-  // 5. СЛУШАЕМ РЕАКЦИИ
-on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
-  const postId = payload.new?.post_id || payload.old?.post_id;
-  if (!postId) return;
+    // 5. СЛУШАЕМ РЕАКЦИИ
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
+      const postId = payload.new?.post_id || payload.old?.post_id;
+      if (!postId) return;
 
-  const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
-  if (!postEl) return;
+      const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+      if (!postEl) return;
 
-  const emoji = payload.new?.emoji || payload.old?.emoji;
-  const btn = postEl.querySelector(`[data-action="toggle-reaction"][data-emoji="${emoji}"]`);
-  if (!btn) return;
+      const emoji = payload.new?.emoji || payload.old?.emoji;
+      const btn = postEl.querySelector(`[data-action="toggle-reaction"][data-emoji="${emoji}"]`);
+      if (!btn) return;
 
-  const countEl = btn.querySelector(".reaction-count");
-  let current = parseInt(countEl.textContent, 10) || 0;
+      // Игнорируем, если это наша реакция (мы уже обновили её оптимистично)
+      if ((payload.new && payload.new.user_id === auth.currentUser?.id) || 
+          (payload.old && payload.old.user_id === auth.currentUser?.id)) return;
 
-  if (payload.eventType === 'INSERT') {
-    current++;
-    btn.classList.add("active");
-  } else if (payload.eventType === 'DELETE') {
-    current = Math.max(0, current - 1);
-    if (current === 0) btn.classList.remove("active");
-  }
+      const countEl = btn.querySelector(".reaction-count");
+      let current = parseInt(countEl.textContent, 10) || 0;
 
-  countEl.textContent = current > 0 ? current : '';
-})
+      if (payload.eventType === 'INSERT') {
+        current++;
+      } else if (payload.eventType === 'DELETE') {
+        current = Math.max(0, current - 1);
+      }
+
+      countEl.textContent = current > 0 ? current : '';
+    })
+    
+    .subscribe((status, err) => {
+      console.log("🔥 Realtime Status:", status);
+      if (err) console.error("🔥 Realtime Error:", err);
+    });
 }
 
 // ===== RENDER COMMENTS =====
