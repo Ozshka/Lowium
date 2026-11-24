@@ -404,23 +404,58 @@ function initRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
       if (!auth.isAdmin) return;
       if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
-        toast("Verification pending!", "info");
+        toast("Новая заявка на верификацию!", "info");
       }
       renderPendingVerifications();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
       let postId = payload.new?.post_id || payload.old?.post_id;
+      let emoji = payload.new?.emoji || payload.old?.emoji;
+      let userId = payload.new?.user_id || payload.old?.user_id;
 
-      if (payload.eventType === 'DELETE' && !postId) {
-        const emoji = payload.old.emoji;
-        const btn = document.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
-        if (btn) postId = btn.dataset.postId;
+      if (userId === auth.currentUser?.id) return;
+
+      if (!postId) {
+        if (payload.eventType === 'DELETE' && emoji) {
+          const btn = document.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
+          if (btn) postId = btn.dataset.postId;
+        }
       }
-
       if (!postId) return;
 
-      if (!isUserTyping()) {
-        renderPostsList();
+      const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+      if (!postEl) return;
+
+      const footerLeft = postEl.querySelector(".post-footer-left");
+      if (!footerLeft) return;
+
+      let pill = footerLeft.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
+
+      if (payload.eventType === 'INSERT') {
+        if (pill) {
+          const countEl = pill.querySelector(".reaction-count");
+          if (countEl) countEl.textContent = String(parseInt(countEl.textContent, 10) + 1);
+        } else {
+          const newPill = document.createElement("button");
+          newPill.className = "reaction-pill";
+          newPill.dataset.action = "toggle-reaction";
+          newPill.dataset.postId = postId;
+          newPill.dataset.emoji = emoji;
+          newPill.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">1</span>`;
+          
+          const trigger = footerLeft.querySelector(".reaction-dropdown-wrapper");
+          footerLeft.insertBefore(newPill, trigger);
+        }
+      } else if (payload.eventType === 'DELETE') {
+        if (pill) {
+          const countEl = pill.querySelector(".reaction-count");
+          let current = parseInt(countEl.textContent, 10) || 0;
+          if (current <= 1) {
+            pill.remove();
+          } else {
+            countEl.textContent = String(current - 1);
+          }
+        }
       }
     })
     .subscribe();
@@ -1140,14 +1175,14 @@ $("postsList").addEventListener("click", async (e) => {
         target.classList.remove("active");
         if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
       }
-      toast("Reaction error: " + err.message, "error");
+      toast("Error with reaction: " + err.message, "error");
     }
   }
   else if (action === "toggle-like") {
     try {
       await posts.toggleLike(postId, target);
     } catch (err) {
-      toast("Like error:" + err.message, "error");
+      toast("Error with like: " + err.message, "error");
     }
   }
   else if (action === "edit-post") {
