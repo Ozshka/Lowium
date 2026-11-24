@@ -431,7 +431,7 @@ function initRealtime() {
       }
     })
     }
-    .subscribe();
+    subscribe();
 }
 
 // ===== RENDER COMMENTS =====
