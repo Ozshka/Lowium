@@ -652,45 +652,91 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 .new-posts-banner:hover { background: var(--accent-hover); border-color: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(194, 89, 63, 0.3); }
 .new-posts-banner[hidden] { display: none !important; }
 
-.post-reactions {
+/* Контейнер для лайка, реакций и кнопки-триггера */
+.post-footer-left {
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.reaction-btn {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  padding: 4px 10px;
-  border-radius: 99px;
-  font-size: 0.9rem;
-  font-weight: 500;
+/* Общий стиль для всех пилюль (лайк + реакции) */
+.like-btn,
+.reaction-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s var(--ease-smooth);
 }
 
-.reaction-btn:hover {
+.like-btn:hover,
+.reaction-pill:hover {
   background: var(--input-bg);
   border-color: var(--text-muted);
 }
 
-.reaction-btn.active {
-  background: var(--btn-glass-bg);
+/* Активная реакция (поставленная тобой) */
+.reaction-pill.active {
+  background: rgba(194, 89, 63, 0.1);
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+.like-btn.liked {
+  background: var(--like);
+  border-color: var(--like);
+  color: #fff;
+}
+
+/* Кнопка-триггер для открытия меню (просто иконка) */
+.reaction-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.reaction-trigger:hover {
+  background: var(--input-bg);
   color: var(--text-main);
 }
 
-.reaction-emoji {
-  font-size: 1.1rem;
-  line-height: 1;
+/* Позиционирование выпадающего меню */
+.reaction-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
 }
 
-.reaction-count {
-  font-size: 0.8rem;
-  min-width: 1ch;
-  text-align: center;
+.reaction-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: all 0.2s var(--ease-smooth);
+}
+
+.reaction-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
