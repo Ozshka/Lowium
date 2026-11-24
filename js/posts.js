@@ -214,23 +214,12 @@ export function clearCommentsCache(postId) {
   commentsCache.delete(String(postId));
 }
 
-export async function deleteComment(commentId, postId) {
-  postId = String(postId);
-  const { error } = await supabase.from("comments").delete().eq("id", commentId);
-  if (error) throw error;
-
-  // чистим кэш этого поста, чтобы при следующем открытии загрузилось с сервера
-  commentsCache.delete(postId);
-
-  return true;
-}
-
 export async function toggleReaction(postId, emoji) {
   if (!auth.currentUser) return;
 
   const userId = auth.currentUser.id;
 
-  // 1. Пытаемся удалить — если удалили, значит toggle off
+  // 1. Пытаемся удалить. ВАЖНО: .select() возвращает удаленные строки!
   const { data: deleted, error: delErr } = await supabase
     .from("post_reactions")
     .delete()
@@ -239,15 +228,17 @@ export async function toggleReaction(postId, emoji) {
 
   if (delErr) throw delErr;
 
+  // 2. Если что-то удалили — значит реакция снята, выходим
   if (deleted && deleted.length > 0) {
     return { action: "removed" };
   }
 
-  // 2. Нечего удалять → вставляем; 23505 = кто-то уже вставил параллельно — не падаем
+  // 3. Если ничего не удалили — значит реакции не было, добавляем
   const { error: insErr } = await supabase
     .from("post_reactions")
     .insert({ post_id: postId, user_id: userId, emoji });
 
+  // Игнорируем 23505 (409 Conflict), если реакция уже есть (двойной клик)
   if (insErr && insErr.code !== "23505") throw insErr;
 
   return { action: "added" };
