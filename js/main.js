@@ -42,10 +42,11 @@ setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
 // ===== THEME TOGGLE CLICK =====
 $("themeToggle").addEventListener("click", async () => {
-  // Принудительно убираем анимацию с обеих иконок
+  // 1. Принудительно убираем класс анимации с обеих иконок
   $("iconMoon").classList.remove("animate-spin");
   $("iconSun").classList.remove("animate-spin");
 
+  // 2. Меняем тему
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
   
@@ -197,50 +198,18 @@ async function renderPostsList() {
       // РЕАКЦИИ
       const reactions = post.reactions || {};
       const userReactions = post.userReactions || new Set();
-      const reactionEmojis = [
-        "❤️", "🔥", "😂", "👍", "💯", "🤔", "😮", "😢", "😡", "🎉", 
-        "🙏", "👏", "🚀", "💩", "🤯", "🤩"
-      ];
+      const reactionEmojis = ["🔥", "😂", "🤔", "💯"];
 
-      // Блок активных реакций под постом
-      let activeReactionsHtml = "";
-      const activeList = Object.keys(reactions).filter(e => reactions[e] > 0);
-      if (activeList.length > 0) {
-        activeReactionsHtml = `<div class="post-active-reactions">
-          ${activeList.map(emoji => {
-            const isActive = userReactions.has(`${postId}_${emoji}`);
-            return `<div class="active-reaction ${isActive ? 'user-reacted' : ''}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
-              <span class="reaction-emoji">${emoji}</span>
-              <span class="reaction-count">${reactions[emoji]}</span>
-            </div>`;
-          }).join("")}
-        </div>`;
-      }
-
-      // Выпадающее меню (сетка + кастомная кнопка)
-      const dropdownHtml = `
-        <div class="reaction-dropdown-wrapper">
-          <button class="reaction-trigger" type="button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-          <div class="reaction-menu">
-            <div class="reaction-grid">
-              ${reactionEmojis.map(emoji => {
-                const count = reactions[emoji] || 0;
-                const isActive = userReactions.has(`${postId}_${emoji}`);
-                return `<button class="reaction-btn ${isActive ? 'active' : ''}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
-                  <span class="reaction-emoji">${emoji}</span>
-                  ${count > 0 ? `<span class="reaction-count">${count}</span>` : ''}
-                </button>`;
-              }).join("")}
-            </div>
-            <button class="reaction-custom-btn" data-action="open-emoji-picker" data-post-id="${postId}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
-              <span>Другой...</span>
-            </button>
-          </div>
-        </div>
-      `;
+      const reactionsHtml = reactionEmojis.map(emoji => {
+        const count = reactions[emoji] || 0;
+        const isActive = userReactions.has(`${postId}_${emoji}`); 
+        const activeClass = isActive ? "active" : ""; 
+        
+        return `<button class="reaction-btn ${activeClass}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
+          <span class="reaction-emoji">${emoji}</span>
+          <span class="reaction-count">${count > 0 ? count : ''}</span>
+        </button>`;
+      }).join("");
 
       return `
        <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
@@ -267,15 +236,14 @@ async function renderPostsList() {
         ${imagesHtml}
         <div class="post-content">${escapeHtml(post.content)}</div>
 
-        ${activeReactionsHtml}
-
         <div class="post-footer">
-          <div class="post-footer-left">
-            <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
-              <span class="like-icon">${likeIcon}</span>
-              <span class="like-count">${likeState.count}</span>
-            </button>
-            ${dropdownHtml}
+          <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
+            <span class="like-icon">${likeIcon}</span>
+            <span class="like-count">${likeState.count}</span>
+          </button>
+          
+          <div class="post-reactions">
+            ${reactionsHtml}
           </div>
 
           ${canManage ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
@@ -359,7 +327,6 @@ function initRealtime() {
       }
 
       if (!postId) return;
-
       const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
       if (!postEl) return;
 
@@ -433,17 +400,29 @@ function initRealtime() {
       renderPendingVerifications();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
-      // Если реакция от другого юзера — перерисовываем ленту (или обновляем только этот пост)
       const postId = payload.new?.post_id || payload.old?.post_id;
       if (!postId) return;
 
-      // Не перерисовываем, если это наша реакция (мы уже обновили UI)
+      const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
+      if (!postEl) return;
+
+      const emoji = payload.new?.emoji || payload.old?.emoji;
+      const btn = postEl.querySelector(`[data-action="toggle-reaction"][data-emoji="${emoji}"]`);
+      if (!btn) return;
+
       if ((payload.new && payload.new.user_id === auth.currentUser?.id) || 
           (payload.old && payload.old.user_id === auth.currentUser?.id)) return;
-      
-      // Для простоты перерисовываем всю ленту (чтобы блок под постом обновился)
-      // В идеале нужно обновлять только конкретный пост, но это сложнее
-      renderPostsList(); 
+
+      const countEl = btn.querySelector(".reaction-count");
+      let current = parseInt(countEl.textContent, 10) || 0;
+
+      if (payload.eventType === 'INSERT') {
+        current++;
+      } else if (payload.eventType === 'DELETE') {
+        current = Math.max(0, current - 1);
+      }
+
+      countEl.textContent = current > 0 ? current : '';
     })
     .subscribe((status, err) => {
       console.log("🔥 Realtime Status:", status);
@@ -1096,21 +1075,6 @@ $("settingsModal").addEventListener("click", (e) => { if (e.target === $("settin
 
 // ===== POSTS LIST EVENT DELEGATION =====
 $("postsList").addEventListener("click", async (e) => {
-  // Закрываем все открытые меню, если кликнули вне них
-  if (!e.target.closest(".reaction-dropdown-wrapper")) {
-    document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
-  }
-
-  // Открытие/закрытие меню реакций
-  const trigger = e.target.closest(".reaction-trigger");
-  if (trigger) {
-    const menu = trigger.nextElementSibling;
-    const isOpen = menu.classList.contains("open");
-    document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
-    if (!isOpen) menu.classList.add("open");
-    return;
-  }
-
   const target = e.target.closest("[data-action]");
   if (!target) return;
   
@@ -1119,46 +1083,30 @@ $("postsList").addEventListener("click", async (e) => {
 
   if (action === "toggle-reaction") {
     const emoji = target.dataset.emoji;
-    document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
+    const isCurrentlyActive = target.classList.contains("active");
+    const countEl = target.querySelector(".reaction-count");
+    let current = parseInt(countEl.textContent, 10) || 0;
 
-    // Оптимистичное обновление (перерисовываем ленту для обновления блока реакций)
+    // Оптимистичное обновление
+    if (isCurrentlyActive) {
+      target.classList.remove("active");
+      current = Math.max(0, current - 1);
+    } else {
+      target.classList.add("active");
+      current++;
+    }
+    countEl.textContent = current > 0 ? current : '';
+
+    // Отправка в БД
     try {
       await posts.toggleReaction(postId, emoji);
-      renderPostsList(); 
     } catch (err) {
-      toast("Ошибка при реакции: " + err.message, "error");
+      // Откат при ошибке
+      target.classList.toggle("active");
+      const revertCount = parseInt(countEl.textContent, 10) || 0;
+      countEl.textContent = (isCurrentlyActive ? revertCount + 1 : Math.max(0, revertCount - 1)) || '';
+      toast("Ошибка при реакции", "error");
     }
-  }
-  else if (action === "open-emoji-picker") {
-    const postEl = target.closest(".post");
-    
-    const input = document.createElement("input");
-    input.type = "text";
-    input.style.position = "absolute";
-    input.style.opacity = "0";
-    input.style.pointerEvents = "none";
-    document.body.appendChild(input);
-    
-    input.focus();
-
-    input.addEventListener("input", async (ev) => {
-      const emoji = ev.target.value.trim();
-      if (!emoji) return;
-      
-      input.remove();
-      document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
-
-      try {
-        await posts.toggleReaction(postId, emoji);
-        renderPostsList(); 
-      } catch (err) {
-        toast("Ошибка при реакции: " + err.message, "error");
-      }
-    });
-
-    input.addEventListener("blur", () => {
-      setTimeout(() => { if (document.body.contains(input)) input.remove(); }, 200);
-    });
   }
   else if (action === "toggle-like") {
     await posts.toggleLike(postId, target);
