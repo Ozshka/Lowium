@@ -21,7 +21,7 @@ export async function fetchPosts() {
 
   if (postsError) throw postsError;
 
- const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified");
+  const { data: profiles } = await supabase.from("profiles").select("id, display_name, tag, avatar_url, bio, region, is_verified");
   const profileMap = {};
   if (profiles) profiles.forEach(p => profileMap[p.id] = p);
 
@@ -32,16 +32,69 @@ export async function fetchPosts() {
   const commentCounts = {};
   const likeCounts = {};
   const userLikes = new Set();
+  
+  const reactionsMap = {};
+  const userReactions = new Set();
 
   if (postIds.length > 0) {
+   
     const { data: cRows } = await supabase.from("comments").select("post_id").in("post_id", postIds);
     if (cRows) cRows.forEach(r => { const k = String(r.post_id); commentCounts[k] = (commentCounts[k] || 0) + 1; });
 
+    
     const { data: lRows } = await supabase.from("likes").select("post_id, user_id").in("post_id", postIds);
     if (lRows) lRows.forEach(r => {
       const k = String(r.post_id);
       likeCounts[k] = (likeCounts[k] || 0) + 1;
       if (auth.currentUser && r.user_id === auth.currentUser.id) userLikes.add(k);
+    });
+
+    
+    const { data: rRows } = await supabase.from("post_reactions").select("post_id, emoji, user_id").in("post_id", postIds);
+    if (rRows) {
+      rRows.forEach(r => {
+        const k = String(r.post_id);
+        if (!reactionsMap[k]) reactionsMap[k] = {};
+        reactionsMap[k][r.emoji] = (reactionsMap[k][r.emoji] || 0) + 1;
+        
+        if (auth.currentUser && r.user_id === auth.currentUser.id) {
+          userReactions.add(`${k}_${r.emoji}`);
+        }
+      });
+    }
+  }
+
+  likesCache.clear();
+
+  return (posts || []).map(post => {
+    const k = String(post.id);
+    likesCache.set(k, { count: likeCounts[k] || 0, liked: userLikes.has(k) });
+    
+    const authorProfile = profileMap[post.user_id] || { display_name: "Anonymous", tag: "@anon", avatar_url: null, bio: null, region: null, is_verified: false };
+    
+    return {
+      ...post,
+      author: authorProfile,
+      is_owner: adminIds.has(post.user_id),
+      comment_count: commentCounts[k] || 0,
+      reactions: reactionsMap[k] || {},      // <-- Передаем реакции
+      userReactions: userReactions          // <-- Передаем инфу о том, кто что лайкнул
+    };
+  });
+}
+
+  return (posts || []).map(post => {
+    const k = String(post.id);
+    // ...
+    return {
+      ...post,
+      author: authorProfile,
+      is_owner: adminIds.has(post.user_id),
+      comment_count: commentCounts[k] || 0,
+      reactions: reactionsMap[k] || {},
+      userReactions: userReactions // <-- Передаем в пост
+    };
+    });
     });
   }
 
@@ -195,4 +248,27 @@ export async function deleteComment(commentId, postId) {
   commentsCache.delete(postId);
 
   return true;
+}
+
+export async function toggleReaction(postId, emoji) {
+  postId = String(postId);
+  if (!auth.currentUser) return;
+
+  const { data: existing } = await supabase
+    .from("post_reactions")
+    .select("id")
+    .eq("post_id", postId)
+    .eq("user_id", auth.currentUser.id)
+    .eq("emoji", emoji)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("post_reactions").delete().eq("id", existing.id);
+  } else {
+    await supabase.from("post_reactions").insert({
+      post_id: postId,
+      user_id: auth.currentUser.id,
+      emoji: emoji
+    });
+  }
 }
