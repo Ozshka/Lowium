@@ -1166,27 +1166,53 @@ $("postsList").addEventListener("click", async (e) => {
     const isActive = target.classList.contains("active");
     const countEl = target.querySelector(".reaction-count");
     
+    // 1. Оптимистичное обновление UI (мгновенно)
     if (isActive) {
       target.classList.remove("active");
-      if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+      if (countEl) {
+        let current = parseInt(countEl.textContent, 10) || 0;
+        if (current <= 1) {
+          target.remove(); // <--- УДАЛЯЕМ ПИЛЮЛЮ, если счетчик 0
+        } else {
+          countEl.textContent = current - 1;
+        }
+      }
     } else {
       target.classList.add("active");
-      if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+      if (countEl) {
+        countEl.textContent = (parseInt(countEl.textContent, 10) || 0) + 1;
+      }
     }
 
+    // 2. Запрос в базу (с откатом при ошибке)
     try {
       await posts.toggleReaction(postId, emoji);
     } catch (err) {
+      // Если ошибка — откатываем UI обратно
       if (isActive) {
+        // Возвращаем класс и счетчик
         target.classList.add("active");
-        if (countEl) countEl.textContent = parseInt(countEl.textContent, 10) + 1;
+        if (countEl) {
+           countEl.textContent = (parseInt(countEl.textContent, 10) || 0) + 1;
+        }
       } else {
+        // Если пытались добавить, но не вышло — убираем класс и вычитаем
         target.classList.remove("active");
-        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
+        if (countEl) {
+          let current = parseInt(countEl.textContent, 10) || 0;
+          if (current <= 1 && !document.body.contains(target)) {
+            // Если пилюлю уже успели удалить, ничего не делаем
+          } else if (current <= 1) {
+            target.remove();
+          } else {
+            countEl.textContent = current - 1;
+          }
+        }
       }
       toast("Error with reaction: " + err.message, "error");
     }
   }
+
   else if (action === "toggle-like") {
     try {
       await posts.toggleLike(postId, target);
