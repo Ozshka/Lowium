@@ -400,7 +400,7 @@ function initRealtime() {
     .subscribe();
 
   // 5. СЛУШАЕМ РЕАКЦИИ
-.on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
+on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
   const postId = payload.new?.post_id || payload.old?.post_id;
   if (!postId) return;
 
