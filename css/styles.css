@@ -89,8 +89,8 @@ body {
   font-size: 0.75rem !important;
   line-height: 1.2 !important;
   z-index: 100 !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  /* backdrop-filter: blur(8px) !important; */
+/*  -webkit-backdrop-filter: blur(8px) !important; */
 }
 
 body.auth-mode { overflow: hidden; }
@@ -141,12 +141,12 @@ body.auth-mode { overflow: hidden; }
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 2px 8px var(--shadow);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s var(--ease-smooth);
+  transition: border-color 0.3s ease, transform 0.3s var(--ease-smooth);
   animation: fadeInUp 0.5s var(--ease-smooth) both;
 }
 .card:hover { 
   border-color: #d8d4ce; 
-  box-shadow: 0 4px 16px var(--shadow-hover); 
+ /* box-shadow: 0 4px 16px var(--shadow-hover); */
 }
 [data-theme="dark"] .card:hover { border-color: #4a4642; }
 
@@ -218,9 +218,9 @@ button {
 /* --- МОДАЛКИ --- */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.4); display: none; align-items: center;
+  background: rgba(0, 0, 0, 0.6); display: none; align-items: center;
   justify-content: center; z-index: 9999; padding: 20px;
-  backdrop-filter: blur(4px);
+ /* backdrop-filter: blur(4px); */
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -358,7 +358,7 @@ textarea { resize: none; min-height: 100px; line-height: 1.6; }
 .preview-item .remove-btn:hover { background: rgba(0,0,0,0.8); transform: scale(1.1); }
 
 /* --- ПОСТЫ --- */
-.posts { display: flex; flex-direction: column; gap: 32px; width: 100%; }
+.posts { display: flex; flex-direction: column; gap: 32px; width: 100%; will-change: transform; transform: translateZ(0); }
 .post { padding: 40px; width: 100%; content-visibility: auto; contain-intrinsic-size: 500px; }
 
 .post-author { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; width: fit-content; transition: opacity 0.3s ease; }
@@ -619,7 +619,7 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 /* --- ЛАЙТБОКС (IMAGE VIEWER) --- */
 .image-viewer { 
   position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-  background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); 
+  background: rgba(0, 0, 0, 0.95); /* backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); */
   display: flex; align-items: center; justify-content: center; z-index: 99999; 
   opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 40px; 
 }
