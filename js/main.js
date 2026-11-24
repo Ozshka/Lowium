@@ -1132,21 +1132,6 @@ $("postsList").addEventListener("click", async (e) => {
 
   if (action === "toggle-reaction") {
     const emoji = target.dataset.emoji;
-    try {
-      await posts.toggleReaction(postId, emoji);
-      renderPostsList(); // Перерисовываем
-    } catch (err) {
-      toast("Ошибка при реакции", "error");
-    }
-  }
-  const target = e.target.closest("[data-action]");
-  if (!target) return;
-  
-  const action = target.dataset.action;
-  const postId = target.dataset.postId;
-
-  if (action === "toggle-reaction") {
-    const emoji = target.dataset.emoji;
     const isCurrentlyActive = target.classList.contains("active");
     const countEl = target.querySelector(".reaction-count");
     let current = parseInt(countEl.textContent, 10) || 0;
