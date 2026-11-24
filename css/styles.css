@@ -140,7 +140,7 @@ body.auth-mode { overflow: hidden; }
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 2px 8px var(--shadow);
+  /*box-shadow: 0 2px 8px var(--shadow);*/
   transition: border-color 0.3s ease, transform 0.3s var(--ease-smooth);
   animation: fadeInUp 0.5s var(--ease-smooth) both;
 }
@@ -359,7 +359,7 @@ textarea { resize: none; min-height: 100px; line-height: 1.6; }
 
 /* --- ПОСТЫ --- */
 .posts { display: flex; flex-direction: column; gap: 32px; width: 100%; will-change: transform; transform: translateZ(0); }
-.post { padding: 40px; width: 100%; content-visibility: auto; contain-intrinsic-size: 500px; }
+.post { padding: 40px; width: 100%; /*content-visibility: auto;*/ contain-intrinsic-size: 500px; }
 
 .post-author { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; width: fit-content; transition: opacity 0.3s ease; }
 .post-author-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
@@ -559,7 +559,7 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
 .empty-state p { font-size: 1rem; margin: 0; letter-spacing: 0.02em; }
 
 .post { animation: floatIn 0.4s var(--ease-smooth) both; /*animation-delay: calc(var(--index, 0) * 0.04s);*/ transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
-.post:hover { transform: translateY(-2px); }
+.post:hover { /*transform: translateY(-2px);*/ }
 
 .post h2 { transition: color 0.3s ease; }
 .post-author:hover { opacity: 0.8; }
