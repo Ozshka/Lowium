@@ -205,7 +205,7 @@ async function renderPostsList() {
       const verifiedBadge = getVerifiedBadgeHtml(post.author.is_verified);
 
       return `
-      <article class="post card" style="--index: ${index};" data-post-id="${escapeHtml(postId)}">
+       <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
         <div class="post-author js-open-profile"
              data-name="${escapeHtml(authorName)}"
              data-tag="${escapeHtml(authorTag)}"
