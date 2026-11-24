@@ -439,10 +439,7 @@ function initRealtime() {
       countEl.textContent = current > 0 ? current : '';
     })
     
-    .subscribe((status, err) => {
-      console.log("🔥 Realtime Status:", status);
-      if (err) console.error("🔥 Realtime Error:", err);
-    });
+    .subscribe();
 }
 
 // ===== RENDER COMMENTS =====
