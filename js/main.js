@@ -26,17 +26,21 @@ updateThemeIcon(savedTheme);
 // ===== SPIN ANIMATION ON HOVER =====
 function setupSpinHover(element, innerSelector = null) {
   if (!element) return;
-  const target = innerSelector ? element.querySelector(innerSelector) : element;
-  if (!target) return;
 
   element.addEventListener("mouseenter", () => {
+    // Ищем иконку прямо в момент наведения (чтобы найти именно видимую)
+    const target = innerSelector ? element.querySelector(innerSelector) : element;
+    
+    if (!target) return;
     if (target.classList.contains("animate-spin")) return;
+    
     target.classList.add("animate-spin");
     setTimeout(() => target.classList.remove("animate-spin"), 800);
   });
 }
 
-setupSpinHover(document.getElementById("themeToggle"), "svg");
+// Передаем селектор, который ищет только видимую иконку (у которой нет display: none)
+setupSpinHover(document.getElementById("themeToggle"), "svg:not([style*='display: none'])");
 setupSpinHover(document.getElementById("settingsBtn"), "svg");
 setupSpinHover(document.getElementById("userProfile"), ".user-avatar-small");
 
