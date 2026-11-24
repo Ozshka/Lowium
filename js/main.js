@@ -198,22 +198,33 @@ async function renderPostsList() {
       // РЕАКЦИИ
       const reactions = post.reactions || {};
       const userReactions = post.userReactions || new Set();
-      const reactionEmojis = ["🔥", "😂", "🤔", "💯"];
 
-      const reactionsHtml = reactionEmojis.map(emoji => {
-        const count = reactions[emoji] || 0;
-        const isActive = userReactions.has(`${postId}_${emoji}`); 
-        const activeClass = isActive ? "active" : ""; 
-        
-        return `<button class="reaction-btn ${activeClass}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
-          <span class="reaction-emoji">${emoji}</span>
-          <span class="reaction-count">${count > 0 ? count : ''}</span>
-        </button>`;
-      }).join("");
+      // 1. Блок с активными реакциями (пилюли)
+      let activeReactionsHtml = "";
+      const activeList = Object.keys(reactions).filter(e => reactions[e] > 0);
+      
+      if (activeList.length > 0) {
+        activeReactionsHtml = activeList.map(emoji => {
+          const isActive = userReactions.has(`${postId}_${emoji}`);
+          return `<button class="reaction-pill ${isActive ? 'active' : ''}" data-action="toggle-reaction" data-post-id="${postId}" data-emoji="${emoji}">
+            <span class="reaction-emoji">${emoji}</span>
+            <span class="reaction-count">${reactions[emoji]}</span>
+          </button>`;
+        }).join("");
+      }
+
+      // 2. Триггер для меню и само меню (контейнер для EmojiMart)
+      const dropdownHtml = `
+        <div class="reaction-dropdown-wrapper">
+          <button class="reaction-trigger" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+          </button>
+          <div class="reaction-menu" id="emoji-menu-${postId}" data-post-id="${postId}"></div>
+        </div>
+      `;
 
       return `
        <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
-        <div class="post-author js-open-profile"
              data-name="${escapeHtml(authorName)}"
              data-tag="${escapeHtml(authorTag)}"
              data-avatar="${escapeHtml(authorAvatar)}"
@@ -236,14 +247,15 @@ async function renderPostsList() {
         ${imagesHtml}
         <div class="post-content">${escapeHtml(post.content)}</div>
 
-        <div class="post-footer">
-          <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}" data-tooltip="${likeState.liked ? 'Unlike' : 'Like'}">
-            <span class="like-icon">${likeIcon}</span>
-            <span class="like-count">${likeState.count}</span>
-          </button>
-          
-          <div class="post-reactions">
-            ${reactionsHtml}
+          <div class="post-footer">
+          <div class="post-footer-left">
+            <button class="${likeBtnClass}" type="button" data-action="toggle-like" data-post-id="${escapeHtml(postId)}">
+              <span class="like-icon">${likeIcon}</span>
+              <span class="like-count">${likeState.count}</span>
+            </button>
+            
+            ${activeReactionsHtml}
+            ${dropdownHtml}
           </div>
 
           ${canManage ? `<div class="post-footer-actions" style="display: flex; gap: 8px;">
@@ -251,7 +263,7 @@ async function renderPostsList() {
             <button class="btn-glass" data-action="delete-post" data-post-id="${escapeHtml(postId)}">Delete</button>
           </div>` : ""}
         </div>
-
+        
         <div class="comments-section" data-comments-for="${escapeHtml(postId)}">
           <button class="comments-toggle" data-action="toggle-comments" data-post-id="${escapeHtml(postId)}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
@@ -399,35 +411,27 @@ function initRealtime() {
       }
       renderPendingVerifications();
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
-      const postId = payload.new?.post_id || payload.old?.post_id;
-      if (!postId) return;
+     .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, (payload) => {
+      let postId = payload.new?.post_id || payload.old?.post_id;
 
-      const postEl = document.querySelector(`.post[data-post-id="${postId}"]`);
-      if (!postEl) return;
-
-      const emoji = payload.new?.emoji || payload.old?.emoji;
-      const btn = postEl.querySelector(`[data-action="toggle-reaction"][data-emoji="${emoji}"]`);
-      if (!btn) return;
-
-      if ((payload.new && payload.new.user_id === auth.currentUser?.id) || 
-          (payload.old && payload.old.user_id === auth.currentUser?.id)) return;
-
-      const countEl = btn.querySelector(".reaction-count");
-      let current = parseInt(countEl.textContent, 10) || 0;
-
-      if (payload.eventType === 'INSERT') {
-        current++;
-      } else if (payload.eventType === 'DELETE') {
-        current = Math.max(0, current - 1);
+      // Если это DELETE и post_id нет, ищем его в DOM по эмодзи
+      if (payload.eventType === 'DELETE' && !postId) {
+        const emoji = payload.old.emoji;
+        // Ищем любую кнопку с этой реакцией (она привязана к конкретному посту)
+        const btn = document.querySelector(`.reaction-pill[data-emoji="${emoji}"]`);
+        if (btn) postId = btn.dataset.postId;
       }
 
-      countEl.textContent = current > 0 ? current : '';
+      if (!postId) return;
+
+      // Игнорируем свои реакции, если мы уже обновили UI (но мы вызываем renderPostsList, так что можно не игнорировать)
+      // Вместо этого просто перерисовываем ленту, чтобы счетчики всегда были актуальны
+      if (!isUserTyping()) {
+        renderPostsList();
+      }
     })
-    .subscribe((status, err) => {
-      console.log("🔥 Realtime Status:", status);
-      if (err) console.error("🔥 Realtime Error:", err);
-    });
+    })
+    .subscribe();
 }
 
 // ===== RENDER COMMENTS =====
@@ -1075,6 +1079,66 @@ $("settingsModal").addEventListener("click", (e) => { if (e.target === $("settin
 
 // ===== POSTS LIST EVENT DELEGATION =====
 $("postsList").addEventListener("click", async (e) => {
+
+    // Закрываем все меню, если кликнули вне
+  if (!e.target.closest(".reaction-dropdown-wrapper")) {
+    document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
+  }
+
+  // Открываем меню EmojiMart
+  const trigger = e.target.closest(".reaction-trigger");
+  if (trigger) {
+    const wrapper = trigger.closest(".reaction-dropdown-wrapper");
+    const menu = wrapper.querySelector(".reaction-menu");
+    const postId = menu.dataset.postId;
+    const isOpen = menu.classList.contains("open");
+
+    // Закрываем все остальные меню
+    document.querySelectorAll(".reaction-menu.open").forEach(m => m.classList.remove("open"));
+    
+    if (!isOpen) {
+      menu.classList.add("open");
+      
+      // Если меню еще пустое — инициализируем EmojiMart
+      if (menu.innerHTML === "") {
+        const picker = new EmojiMart.Picker({
+          onEmojiSelect: async (emojiData) => {
+            const emoji = emojiData.native;
+            menu.classList.remove("open"); // Закрываем после выбора
+            
+            try {
+              await posts.toggleReaction(postId, emoji);
+              renderPostsList(); // Перерисовываем, чтобы обновить счетчики
+            } catch (err) {
+              toast("Ошибка при реакции: " + err.message, "error");
+            }
+          },
+          theme: document.documentElement.getAttribute("data-theme") || "light",
+          previewPosition: "none",
+          skinTonePosition: "none",
+          perLine: 8,
+        });
+        menu.appendChild(picker);
+      }
+    }
+    return;
+  }
+
+  const target = e.target.closest("[data-action]");
+  if (!target) return;
+  
+  const action = target.dataset.action;
+  const postId = target.dataset.postId;
+
+  if (action === "toggle-reaction") {
+    const emoji = target.dataset.emoji;
+    try {
+      await posts.toggleReaction(postId, emoji);
+      renderPostsList(); // Перерисовываем
+    } catch (err) {
+      toast("Ошибка при реакции", "error");
+    }
+  }
   const target = e.target.closest("[data-action]");
   if (!target) return;
   
