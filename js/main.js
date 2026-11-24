@@ -404,7 +404,7 @@ function initRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
       if (!auth.isAdmin) return;
       if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
-        toast("Новая заявка на верификацию!", "info");
+        toast("Verification pending!", "info");
       }
       renderPendingVerifications();
     })
@@ -1140,14 +1140,14 @@ $("postsList").addEventListener("click", async (e) => {
         target.classList.remove("active");
         if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) - 1);
       }
-      toast("Ошибка при реакции: " + err.message, "error");
+      toast("Reaction error: " + err.message, "error");
     }
   }
   else if (action === "toggle-like") {
     try {
       await posts.toggleLike(postId, target);
     } catch (err) {
-      toast("Ошибка при лайке: " + err.message, "error");
+      toast("Like error:" + err.message, "error");
     }
   }
   else if (action === "edit-post") {
