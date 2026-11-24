@@ -229,7 +229,8 @@ export async function toggleReaction(postId, emoji) {
   postId = String(postId);
   if (!auth.currentUser) return;
 
-  const { data: existing } = await supabase
+  // 1. Проверяем, есть ли уже такая реакция от этого юзера
+  const { data: existing, error: checkError } = await supabase
     .from("post_reactions")
     .select("id")
     .eq("post_id", postId)
@@ -237,13 +238,23 @@ export async function toggleReaction(postId, emoji) {
     .eq("emoji", emoji)
     .maybeSingle();
 
+  if (checkError) throw checkError;
+
+  // 2. Если есть — удаляем, если нет — добавляем
   if (existing) {
-    await supabase.from("post_reactions").delete().eq("id", existing.id);
+    const { error } = await supabase
+      .from("post_reactions")
+      .delete()
+      .eq("id", existing.id);
+    if (error) throw error;
   } else {
-    await supabase.from("post_reactions").insert({
-      post_id: postId,
-      user_id: auth.currentUser.id,
-      emoji: emoji
-    });
+    const { error } = await supabase
+      .from("post_reactions")
+      .insert({ 
+        post_id: postId, 
+        user_id: auth.currentUser.id, 
+        emoji: emoji 
+      });
+    if (error) throw error;
   }
 }
