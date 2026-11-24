@@ -223,8 +223,9 @@ async function renderPostsList() {
         </div>
       `;
 
-      return `
+       return `
        <article class="post card" style="${index < 3 ? `--index: ${index};` : ''}" data-post-id="${escapeHtml(postId)}">
+        <div class="post-author js-open-profile"
              data-name="${escapeHtml(authorName)}"
              data-tag="${escapeHtml(authorTag)}"
              data-avatar="${escapeHtml(authorAvatar)}"
