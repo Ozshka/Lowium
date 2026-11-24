@@ -740,3 +740,27 @@ textarea.auto-grow.is-overflowing { overflow-y: auto; }
   pointer-events: auto;
   transform: translateY(0);
 }
+
+.reaction-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px; /* Чуть больше отступов, чтобы поместился плюс */
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reaction-trigger:hover {
+  background: var(--btn-glass-bg);
+  color: var(--text-main);
+  border-color: var(--text-main);
+}
+
+.reaction-trigger svg {
+  width: 16px;
+  height: 16px;
+}
